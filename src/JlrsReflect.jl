@@ -95,8 +95,8 @@ function structfield(ty::Type, jlname::Symbol, ft::Type, generated::Dict, rename
 end
 
 function structfield(ty::Type, jlname::Symbol, ft::TypeVar, generated::Dict, rename::Dict)
-rsname = if jlname in keys(rename)
-    rename[jlname]
+    rsname = if jlname in keys(rename)
+        rename[jlname]
     else
         string(jlname)
     end
@@ -107,10 +107,20 @@ end
 
 function needslifetimes(tp::TypeParameter)
     if tp.value isa DataType
-        return !isbitstype(tp.value)
+        return !tp.value.hasfreetypevars && !isbitstype(tp.value)
     end
 
     return false
+end
+
+function collecttypeparams!(xyz::Set, bla::DataType)
+    for t in bla.parameters
+        if t isa TypeVar
+            push!(xyz, t.name)
+        elseif t isa DataType && t.hasfreetypevars
+            collecttypeparams!(xyz, t)
+        end
+    end
 end
 
 function structfields(ty::Type, generated::Dict, rename::Dict)
@@ -128,7 +138,13 @@ function structfields(ty::Type, generated::Dict, rename::Dict)
             push!(tparamsset, fieldtype.name)
         elseif length(field.typeparams) > 0
             for tp in field.typeparams
-                push!(tparamsset, tp.name)
+                if tp.value === nothing
+                    push!(tparamsset, tp.name)
+                elseif tp.value isa DataType
+                    collecttypeparams!(tparamsset, tp.value)
+                elseif tp.value isa TypeVar
+                    push!(tparamsset, tp.name)
+                end
             end
         end
 
@@ -377,12 +393,16 @@ function printsubgeneric(field, binding, generated, fieldtype)
         while n > 0
             v = field.typeparams[m].value
             if v === nothing
-                idx = findfirst(t -> t == field.typeparams[m].name, map(t-> t.name, bt.parameters))
+                idx = findfirst(t -> t == field.typeparams[m].name, map(t -> t.name, bt.parameters))
                 
                 if idx !== nothing 
-                    param = generated[basetype(pt.parameters[idx])]
-                    print(param.rsname)
-                    printsubgeneric(param, param, generated, pt.parameters[idx])  
+                    if pt.parameters[idx] isa TypeVar
+                        print(pt.parameters[idx].name)
+                    else
+                        param = generated[basetype(pt.parameters[idx])]
+                        print(param.rsname)
+                        printsubgeneric(param, param, generated, pt.parameters[idx])
+                    end
                 else
                     print(field.typeparams[m].name)
                 end
@@ -525,13 +545,18 @@ struct I
     t::B{B{B{Int32}}}
 end
 
-struct J{T<:Real}
+struct J{T <: Real}
     t::T
 end
 
 struct K end
 
-generated = bindings([A, B{Int64}, C, D{Int64}, E{Int32,2}, F, G, H, I, J, K])
+struct L{U} 
+    t::B{B{U}}
+end
+
+generated = bindings([A, B{Int64}, C, D{Int64}, E{Int32,2}, F, G, H, I, J, K, L])
+# generated = bindings([E{Int32,2}])
 printbindings(generated)
 
 end
