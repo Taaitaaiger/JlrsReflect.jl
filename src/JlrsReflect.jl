@@ -1,562 +1,471 @@
 module JlrsReflect
 
-JuliaType = Union{DataType,UnionAll,Union}
-TypeDict = Dict{JuliaType,Set{JuliaType}}
+abstract type Binding end
+
+struct StructParameter
+    name::Symbol
+    elide::Bool
+end
 
 struct TypeParameter
     name::Symbol
     value
 end
 
-abstract type Binding end
-
-struct BuiltinBinding <: Binding
-    jlname::Symbol
-    rsname::String
-    framelifetime::Bool
-    datalifetime::Bool
-    typeparams::Vector{TypeParameter}
-end
-
 struct GenericBinding <: Binding
-    jlname::Symbol
-    rsname::String
-    typeparam::TypeParameter
+    name::Symbol
 end
 
 struct StructField
-    jlname::Symbol
+    name::Symbol
     rsname::String
-    binding::Binding
+    fieldtype::Binding
     typeparams::Vector{TypeParameter}
-    unionall::Bool
+    referenced::Set{TypeVar}
+    framelifetime::Bool
+    datalifetime::Bool
 end
 
 struct StructBinding <: Binding
-    jlname::Symbol
+    name::Symbol
     rsname::String
-    mod::Module
+    fields::Vector{StructField}
+    typeparams::Vector{StructParameter}
     framelifetime::Bool
     datalifetime::Bool
-    typeparams::Vector{TypeParameter}
-    fields::Vector{StructField}
 end
 
-struct TupleBinding <: Binding
-    fields::Vector{Binding}
+struct BuiltinBinding <: Binding
+    rsname::String
+    typeparams::Vector{StructParameter}
+    framelifetime::Bool
+    datalifetime::Bool
 end
 
-function structfield(ty::Type, jlname::Symbol, ft::Type, generated::Dict, rename::Dict)
-    rsname = if jlname in keys(rename)
-        rename[jlname]
-    else
-        string(jlname)
-    end
+function insertbuiltins!(bindings::Dict{Type, Binding})::Nothing
+    bindings[UInt8] = BuiltinBinding("u8", [], false, false)
+    bindings[UInt16] = BuiltinBinding("u16", [], false, false)
+    bindings[UInt32] = BuiltinBinding("u32", [], false, false)
+    bindings[UInt64] = BuiltinBinding("u64", [], false, false)
+    bindings[Int8] = BuiltinBinding("i8", [], false, false)
+    bindings[Int16] = BuiltinBinding("i16", [], false, false)
+    bindings[Int32] = BuiltinBinding("i32", [], false, false)
+    bindings[Int64] = BuiltinBinding("i64", [], false, false)
+    bindings[Float32] = BuiltinBinding("f32", [], false, false)
+    bindings[Float64] = BuiltinBinding("f64", [], false, false)
+    bindings[Bool] = BuiltinBinding("bool", [], false, false)
+    bindings[Char] = BuiltinBinding("char", [], false, false)
+    
+    bindings[Any] = BuiltinBinding("jlrs::value::Value", [], true, true)
+    bindings[basetype(Array)] = BuiltinBinding("jlrs::value::array::Array", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
+    bindings[Core.CodeInstance] = BuiltinBinding("jlrs::value::code_instance::CodeInstance", [], true, true)
+    bindings[DataType] = BuiltinBinding("jlrs::value::datatype::DataType", [], true, false)
+    bindings[Expr] = BuiltinBinding("jlrs::value::expr::Expr", [], true, false)
+    bindings[Method] = BuiltinBinding("jlrs::value::method::Method", [], true, false)
+    bindings[Core.MethodInstance] = BuiltinBinding("jlrs::value::method_instance::MethodInstance", [], true, false)
+    bindings[Core.MethodTable] = BuiltinBinding("jlrs::value::method_table::MethodTable", [], true, false)
+    bindings[Module] = BuiltinBinding("jlrs::value::module::Module", [], true, false)
+    bindings[Core.SimpleVector] = BuiltinBinding("jlrs::value::simple_vector::SimpleVector", [], true, false)
+    bindings[Core.SSAValue] = BuiltinBinding("jlrs::value::ssa_value::SSAValue", [], true, false)
+    bindings[Symbol] = BuiltinBinding("jlrs::value::symbol::Symbol", [], true, false)
+    bindings[Task] = BuiltinBinding("jlrs::value::task::Task", [], true, false)
+    bindings[Core.TypeName] = BuiltinBinding("jlrs::value::type_name::TypeName", [], true, false)
+    bindings[TypeVar] = BuiltinBinding("jlrs::value::type_var::TypeVar", [], true, false)
+    bindings[Core.TypeMapEntry] = BuiltinBinding("jlrs::value::typemap_entry::TypeMapEntry", [], true, false)
+    bindings[Core.TypeMapLevel] = BuiltinBinding("jlrs::value::typemap_level::TypeMapLevel", [], true, false)
+    bindings[Union] = BuiltinBinding("jlrs::value::union::Union", [], true, false)
+    bindings[UnionAll] = BuiltinBinding("jlrs::value::union_all::UnionAll", [], true, false)
+    bindings[Union{}] = BuiltinBinding("()", [], false, false)
 
-    pt = partialtype(ft)
-    bt = basetype(ft)
-    binding = generated[bt]
-
-    tparams = []
-    unionall = false
-
-    for (base, partial) in zip(bt.parameters, pt.parameters)
-        if partial isa TypeVar 
-            if partial in ty.parameters
-                x = findfirst(tp -> tp.name == base.name, binding.typeparams)
-
-                if x !== nothing
-                    if partial.name isa Core.TypeName
-                        push!(tparams, TypeParameter(partial.name.name, pt.parameters[x]))
-                    else
-                        push!(tparams, TypeParameter(partial.name, pt.parameters[x]))
-                    end
-                end
-            else
-                unionall = true
-                tparams = []
-                binding = generated[Any]
-                break
-            end
-        elseif partial isa DataType
-            x = findfirst(tp -> tp.name == base.name, binding.typeparams)
-
-            if x !== nothing
-                if partial.name isa Core.TypeName
-                    push!(tparams, TypeParameter(partial.name.name, pt.parameters[x]))
-                else
-                    push!(tparams, TypeParameter(partial.name, pt.parameters[x]))
-                end
-            end
-        end
-    end
-
-    StructField(jlname, rsname, binding, tparams, unionall)
+    nothing
 end
 
-function structfield(ty::Type, jlname::Symbol, ft::TypeVar, generated::Dict, rename::Dict)
-    rsname = if jlname in keys(rename)
-        rename[jlname]
-    else
-        string(jlname)
-    end
-
-    binding = GenericBinding(ft.name, string(ft.name), TypeParameter(ft.name, nothing))
-    StructField(jlname, rsname, binding, [TypeParameter(ft.name, nothing)], false)
-end
-
-function needslifetimes(tp::TypeParameter)
-    if tp.value isa DataType
-        return !tp.value.hasfreetypevars && !isbitstype(tp.value)
-    end
-
-    return false
-end
-
-function collecttypeparams!(xyz::Set, bla::DataType)
-    for t in bla.parameters
-        if t isa TypeVar
-            push!(xyz, t.name)
-        elseif t isa DataType && t.hasfreetypevars
-            collecttypeparams!(xyz, t)
-        end
-    end
-end
-
-function structfields(ty::Type, generated::Dict, rename::Dict)
-    println("Generating for $ty")
-    framelifetime = false
-    datalifetime = false
-    fields::Vector{StructField} = []
-
-    tparamsset = Set()
-
-    for (name, fieldtype) in zip(fieldnames(ty), fieldtypes(ty))
-        field = structfield(ty, name, fieldtype, generated, rename)
-
-        if fieldtype isa TypeVar
-            push!(tparamsset, fieldtype.name)
-        elseif length(field.typeparams) > 0
-            for tp in field.typeparams
-                if tp.value === nothing
-                    push!(tparamsset, tp.name)
-                elseif tp.value isa DataType
-                    collecttypeparams!(tparamsset, tp.value)
-                elseif tp.value isa TypeVar
-                    push!(tparamsset, tp.name)
-                end
-            end
-        end
-
-        if hasproperty(field.binding, :framelifetime)
-            framelifetime |= field.binding.framelifetime
-            datalifetime |= field.binding.datalifetime
-
-            for param in field.typeparams
-                lt = needslifetimes(param)
-                framelifetime |= lt
-                datalifetime |= lt
-            end
-        end
-
-        push!(fields, field)
-    end
-
-    tparams = []
-
-    for t in ty.parameters
-        if t.name in tparamsset
-            push!(tparams, TypeParameter(t.name, nothing))
-        end
-    end
-
-    (framelifetime, datalifetime, tparams, fields)
-end
-
-function structbinding(typ::DataType, generated, rename::Dict)
-    jlname = typ.name.name
-    (rsname, renamedfields) = if typ in keys(rename)
-        rename[typ]
-    else
-        string(jlname), Dict()
-    end
-
-    mod = typ.name.module
-    (framelifetime, datalifetime, typeparams, fields) = structfields(typ, generated, renamedfields)
-    StructBinding(jlname, rsname, mod, framelifetime, datalifetime, typeparams, fields)
-end
-
-function getdeps!(out::TypeDict, type::Type, generated)
-    if type in keys(out) return end
-    if type in keys(generated) return end
-
-    try
-        ftset = Set(fieldtypes(type))
-        out[type] = ftset
-
-        for ty in ftset
-            if ty isa DataType || ty isa Union
-                getdeps!(out, ty, generated)
-            end
-        end
-    catch
-        out[type] = Set()
-    end
-end
-
-function toposort!(data::Dict{T,Set{T}}) where T
+function toposort!(data::Dict{Type,Set{Type}})::Vector{Type}
     for (k, v) in data
         delete!(v, k)
     end
 
     for item in setdiff(reduce(∪, values(data)), keys(data))
-        data[item] = Set{T}()
+        data[item] = Set()
     end
     
-    rst = Vector{T}()
+    rst = Vector()
     while true
         ordered = Set(item for (item, dep) in data if isempty(dep))
         if isempty(ordered) break end
         append!(rst, ordered)
-        data = Dict{T,Set{T}}(item => setdiff(dep, ordered) for (item, dep) in data if item ∉ ordered)
+        data = Dict(item => setdiff(dep, ordered) for (item, dep) in data if item ∉ ordered)
     end
     
     @assert isempty(data) "a cyclic dependency exists amongst $(keys(data))"
     rst
 end
 
-function getdeps(types::Vector{<:Type}, generated)::TypeDict
-    out = TypeDict()
-    
-    for type in types
-        getdeps!(out, type, generated)
-    end
-
-    out
-end
-
-# if type is a UnionAll, the DataType at the bottom is returned 
-# if type is a DataType, the same DataType is returned 
-function partialtype(type::Type)
+function partialtype(type::Type)::Union{Nothing,Type}
     if type isa UnionAll
-        ty = type.body
-        while hasproperty(ty, :body)
-            ty = ty.body
-        end
-
-        ty
-    else
-        type
-    end
-end
-
-# Returns the partial type with all type parameters cleared
-function basetype(type::Type)::Union{DataType,Nothing}
-    ty = partialtype(type)
-    partialtype(getproperty(ty.name.module, ty.name.name))
-end
-
-function generatedbindings()
-    generated = Dict()
-
-    generated[Nothing] = BuiltinBinding(:Nothing, "()", false, false, [])
-    
-    # Primitives
-    generated[UInt8] = BuiltinBinding(UInt8.name.name, "u8", false, false, [])
-    generated[UInt8] = BuiltinBinding(UInt8.name.name, "u8", false, false, [])
-    generated[UInt16] = BuiltinBinding(UInt16.name.name, "u16", false, false, [])
-    generated[UInt32] = BuiltinBinding(UInt32.name.name, "u32", false, false, [])
-    generated[UInt64] = BuiltinBinding(UInt64.name.name, "u64", false, false, [])
-    generated[Int8] = BuiltinBinding(Int8.name.name, "i8", false, false, [])
-    generated[Int16] = BuiltinBinding(Int16.name.name, "i16", false, false, [])
-    generated[Int32] = BuiltinBinding(Int32.name.name, "i32", false, false, [])
-    generated[Int64] = BuiltinBinding(Int64.name.name, "i64", false, false, [])
-    generated[Float32] = BuiltinBinding(Float32.name.name, "f32", false, false, [])
-    generated[Float64] = BuiltinBinding(Float64.name.name, "f64", false, false, [])
-    generated[Bool] = BuiltinBinding(Bool.name.name, "bool", false, false, [])
-    generated[Char] = BuiltinBinding(Char.name.name, "char", false, false, [])
-
-    # Defined as JL_DATA_TYPE in julia.h
-    generated[Any] = BuiltinBinding(Any.name.name, "jlrs::value::Value", true, true, [])
-    generated[Array] = BuiltinBinding(Array.body.body.name.name, "jlrs::value::array::Array", true, true, [])
-    generated[Core.CodeInstance] = BuiltinBinding(Core.CodeInstance.name.name, "jlrs::value::code_instance::CodeInstance", true, false, [])
-    generated[DataType] = BuiltinBinding(DataType.name.name, "jlrs::value::datatype::DataType", true, false, [])
-    generated[Expr] = BuiltinBinding(Expr.name.name, "jlrs::value::expr::Expr", true, false, [])
-    generated[Method] = BuiltinBinding(Method.name.name, "jlrs::value::method::Method", true, false, [])
-    generated[Core.MethodInstance] = BuiltinBinding(Core.MethodInstance.name.name, "jlrs::value::method_instance::MethodInstance", true, false, [])
-    generated[Core.MethodTable] = BuiltinBinding(Expr.name.name, "jlrs::value::method_table::MethodTable", true, false, [])
-    generated[Module] = BuiltinBinding(Module.name.name, "jlrs::value::module::Module", true, false, [])
-    generated[Core.SimpleVector] = BuiltinBinding(Core.SimpleVector.name.name, "jlrs::value::simple_vector::SimpleVector", true, false, [])
-    generated[Core.SSAValue] = BuiltinBinding(Core.SSAValue.name.name, "jlrs::value::ssa_value::SSAValue", true, false, [])
-    generated[Symbol] = BuiltinBinding(Symbol.name.name, "jlrs::value::symbol::Symbol", true, false, [])
-    generated[Task] = BuiltinBinding(Task.name.name, "jlrs::value::task::Task", true, false, [])
-    generated[Core.TypeName] = BuiltinBinding(Core.TypeName.name.name, "jlrs::value::type_name::TypeName", true, false, [])
-    generated[TypeVar] = BuiltinBinding(TypeVar.name.name, "jlrs::value::type_var::TypeVar", true, false, [])
-    generated[Core.TypeMapEntry] = BuiltinBinding(Core.TypeMapEntry.name.name, "jlrs::value::typemap_entry::TypeMapEntry", true, false, [])
-    generated[Core.TypeMapLevel] = BuiltinBinding(Core.TypeMapLevel.name.name, "jlrs::value::typemap_level::TypeMapLevel", true, false, [])
-    generated[Union] = BuiltinBinding(Union.name.name, "jlrs::value::union::Union", true, false, [])
-    generated[UnionAll] = BuiltinBinding(UnionAll.name.name, "jlrs::value::union_all::UnionAll", true, false, [])
-
-    generated
-end
-
-function generate(type::DataType, generated::Dict, rename::Dict)
-    if type <: Tuple
-        println("Tuple: ", type)
-    elseif isabstracttype(type)
-        BuiltinBinding(Any.name.name, "jlrs::value::Value", true, true, [])
-    elseif length(type.parameters) > 0
-        t = getproperty(type.name.module, type.name.name)
+        t = type.body
         while hasproperty(t, :body)
             t = t.body
         end
-        structbinding(t, generated, rename)
+
+        return t
     else
-        structbinding(type, generated, rename)
+        return type    
     end
 end
 
-function generate(type::UnionAll, generated::Dict, rename::Dict)
-    t = type
-    while hasproperty(t, :body)
-        t = t.body
-    end
-
-    structbinding(t, generated, rename)
+function basetype(type::Type)::Union{Nothing,Type}
+    pt = partialtype(type)
+    if pt isa Union return pt end
+    if pt == Union{} return pt end
+    partialtype(getproperty(pt.name.module, pt.name.name))
 end
 
-function fusedeps(types::Dict{T,Set{T}})::Dict{Union{DataType,Nothing},Set{Union{DataType,Nothing}}} where T
-    out = Dict()
+function getdeps!(deps::Dict{Type,Set{Type}}, type::Type)::Nothing
+    pt = partialtype(type)
+    bt = basetype(type)
 
-    for (type, deps) in types
-        bt = basetype(type)
-        if !(bt in keys(out))
-            out[bt] = Set()
+    if bt isa Union return end
+    if bt == Any return end
+    if bt == Union{} return end
+
+    for pparam in pt.parameters
+        if pparam isa Type
+            getdeps!(deps, pparam)
         end
+    end
 
-        for dep in deps
-            push!(out[bt], basetype(dep))
+    if bt in keys(deps) return end
+    if bt.abstract return end
+
+    deps[bt] = Set()
+
+    for ty in fieldtypes(bt)
+        if ty isa Type
+            fieldbt = basetype(ty)
+            push!(deps[bt], fieldbt)
+            getdeps!(deps, ty)
+        end
+    end
+
+    nothing
+end
+
+function extractparams(ty::Type, bindings::Dict{Type, Binding})::Set{TypeVar}
+    out = Set()
+    partial = partialtype(ty)
+    base = basetype(ty)
+    binding = bindings[base]
+
+    if !hasproperty(partial, :parameters)
+        return out
+    end
+
+    for (name, param) in zip(binding.typeparams, partial.parameters)
+        if !name.elide
+            if param isa TypeVar
+                idx = findfirst(t -> t.name == name.name, binding.typeparams)
+                if idx !== nothing
+                    push!(out, param)
+                end
+            elseif param isa Type
+                union!(out, extractparams(param, bindings))
+            end
         end
     end
 
     out
 end
 
-function bindings(types::Vector{<:Type}, rename::Dict)
-    generated = generatedbindings()
-    deps = getdeps(map(partialtype, types), generated)
-    deps = fusedeps(deps)
-
-    for t in toposort!(deps)
-        if t in keys(generated) continue end
-        generated[t] = generate(t, generated, rename)
+function isbitsunion(u::Union)::Bool
+    a = if u.a isa Union
+        isbitsunion(u.a)
+    else
+        isbitstype(u.a)
     end
 
-    generated
+    b = if u.b isa Union
+        isbitsunion(u.b)
+    else
+        isbitstype(u.b)
+    end
+
+    a && b
 end
 
-bindings(types::Vector{<:Type}) = bindings(types, Dict())
-
-function printsubgeneric(field, binding, generated, fieldtype) 
-    n = 0
-    if hasproperty(binding, :framelifetime)
-        n += binding.framelifetime
-        n += binding.datalifetime
-    end
-    n += length(field.typeparams)
-    n -= binding isa GenericBinding
-
-    pt = partialtype(fieldtype)
-    bt = basetype(fieldtype)
-
-    if n > 0
-        print("<")
-        if hasproperty(binding, :framelifetime)
-            if binding.framelifetime 
-                print("'frame") 
-                n -= 1
-                if n > 0 
-                    print(", ") 
-                end
-            end
-            if binding.datalifetime 
-                print("'data") 
-                n -= 1
-                if n > 0 
-                    print(", ") 
-                end
-            end
-        end
-
-        m = 1
+function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings::Dict{Type, Binding})
+    if fieldtype isa TypeVar
+        StructField(fieldname, string(fieldname), GenericBinding(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false)
+    elseif fieldtype isa UnionAll
+        bt = basetype(fieldtype)
         
-        while n > 0
-            v = field.typeparams[m].value
-            if v === nothing
-                idx = findfirst(t -> t == field.typeparams[m].name, map(t -> t.name, bt.parameters))
-                
-                if idx !== nothing 
-                    if pt.parameters[idx] isa TypeVar
-                        print(pt.parameters[idx].name)
-                    else
-                        param = generated[basetype(pt.parameters[idx])]
-                        print(param.rsname)
-                        printsubgeneric(param, param, generated, pt.parameters[idx])
-                    end
-                else
-                    print(field.typeparams[m].name)
-                end
-            elseif v isa TypeVar
-                print(v.name)
-            else
-                print(generated[basetype(v)].rsname)
-                printsubgeneric(generated[basetype(v)], generated[basetype(v)], generated, v)
-            end
-
-            n -= 1
-            if n > 0 print(", ") end
-            m += 1
+        if bt.name.name == :Array
+            fieldbinding = bindings[bt]
+            tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, bt.parameters))
+            references = extractparams(bt, bindings)
+            StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
+        else
+            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
         end
-        print(">")
+    elseif fieldtype isa Union
+        if isbitsunion(fieldtype)
+            throw(ErrorException("Bits unions are not supported"))
+        else
+            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+        end
+    elseif fieldtype == Union{}
+        StructField(fieldname, string(fieldname), bindings[Union{}], [], Set(), false, false)
+    elseif fieldtype <: Tuple
+        params = extractparams(fieldtype, bindings)
+        if length(params) > 0
+            # Todo
+        elseif fieldtype.isconcretetype
+            # Todo
+        else
+            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+        end
+    elseif fieldtype isa DataType
+        bt = basetype(fieldtype)
+        if !fieldtype.isinlinealloc && !fieldtype.hasfreetypevars !(bindings[bt] isa BuiltinBinding)
+            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+        else
+            fieldbinding = bindings[bt]
+            tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
+            references = extractparams(fieldtype, bindings)
+            StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
+        end
     end
 end
 
-function printgeneric(field, binding, generated) 
-    n = 0
-    if hasproperty(binding, :framelifetime)
-        n += binding.framelifetime
-        n += binding.datalifetime
-    end
-    n += length(field.typeparams)
-    n -= binding isa GenericBinding
+function createbinding!(bindings::Dict{Type, Binding}, type::Type)::Nothing
+    bt = basetype(type) 
 
-    if n > 0
-        print("<")
-        if hasproperty(binding, :framelifetime)
-            if binding.framelifetime 
-                print("'frame") 
-                n -= 1
-                if n > 0 
-                    print(", ") 
-                end
+    if bt in keys(bindings) return end
+    if bt.abstract 
+        bindings[bt] = bindings[Any]
+        return 
+    end
+
+    fields = []
+    framelifetime = false
+    datalifetime = false
+    typevars = Set()
+    for (fieldname, fieldtype) in zip(fieldnames(bt), fieldtypes(bt))
+        field = structfield(fieldname, fieldtype, bindings)
+        framelifetime |= field.framelifetime
+        datalifetime |= field.datalifetime
+        union!(typevars, field.referenced)
+        push!(fields, field)
+    end
+
+    params = map(a -> StructParameter(a.name, !(a in typevars)), bt.parameters)
+    bindings[bt] = StructBinding(type.name.name, string(type.name.name), fields, params, framelifetime, datalifetime)
+    nothing
+end
+
+function reflect(types::Vector{Type})
+    deps = Dict{Type,Set{Type}}()
+    for ty in types
+        getdeps!(deps, ty)
+    end
+
+    bindings = Dict{Type, Binding}()
+    insertbuiltins!(bindings)
+
+    for ty in toposort!(deps)
+        createbinding!(bindings, ty)
+    end
+
+    names = []
+    for name in keys(bindings)
+        push!(names, name)
+    end
+    sort!(names, lt=(a, b) -> string(a) < string(b))
+
+    for name in names
+        rustimpl = strbinding(bindings[name], bindings)
+        if rustimpl !== nothing
+            println(rustimpl)
+            println()
+        end
+    end
+end
+
+function strgenerics(binding::StructBinding)::Union{Nothing, String}
+    generics = []
+    if binding.framelifetime
+        push!(generics, "'frame")
+    end
+
+    if binding.datalifetime
+        push!(generics, "'data")
+    end
+
+    for param in binding.typeparams
+        if !param.elide
+            push!(generics, string(param.name))
+        end
+    end
+
+    if length(generics) > 0
+        string("<", join(generics, ", "), ">")
+    end
+end
+
+function strgenerics(binding::StructBinding, field::StructField, bindings::Dict{Type, Binding})::Union{Nothing, String}
+    generics = []
+    fieldbinding = field.fieldtype
+
+    if fieldbinding.framelifetime
+        push!(generics, "'frame")
+    end
+
+    if fieldbinding.datalifetime
+        push!(generics, "'data")
+    end
+
+    for param in binding.typeparams
+        if !param.elide
+            push!(generics, string(param.name))
+        end
+    end
+
+    if length(generics) > 0
+        string("<", join(generics, ", "), ">")
+    end
+end
+
+function strsignature(ty::DataType, bindings::Dict{Type, Binding})::String
+    base = basetype(ty)
+    binding = bindings[base]
+
+    name = binding.rsname
+
+    generics = []
+    if binding.framelifetime
+        push!(generics, "'frame")
+    end
+
+    if binding.datalifetime
+        push!(generics, "'data")
+    end
+
+    for param in ty.parameters
+        if param isa TypeVar
+            idx = findfirst(a -> a.name == param.name, binding.typeparams)
+            if idx !== nothing
+                push!(generics, string(param.name))
             end
-            if binding.datalifetime 
-                print("'data") 
-                n -= 1
-                if n > 0 
-                    print(", ") 
+        elseif param isa DataType
+            push!(generics, strsignature(param, bindings))
+        end
+    end
+
+    if length(generics) > 0
+        string(name, "<", join(generics, ", "), ">")
+    else
+        name
+    end
+end
+
+function strsignature(binding::StructBinding, field::StructField, bindings::Dict{Type, Binding})::String
+    if field.fieldtype isa GenericBinding
+        return string(field.fieldtype.name)
+    end
+
+    generics = []
+
+    if field.framelifetime
+        push!(generics, "'frame")
+    end
+
+    if field.datalifetime
+        push!(generics, "'data")
+    end
+
+    for (sparam, tparam) in zip(field.fieldtype.typeparams, field.typeparams)
+        if !sparam.elide
+            if tparam.value isa TypeVar
+                idx = findfirst(a -> a.name == tparam.value.name, binding.typeparams)
+                if idx !== nothing
+                    push!(generics, string(tparam.value.name))
                 end
+            elseif tparam.value isa DataType
+                push!(generics, strsignature(tparam.value, bindings))
             end
         end
+    end
 
-        m = 1
-        
-        while n > 0
-            v = field.typeparams[m].value
-            if v === nothing
-                print(field.typeparams[m].name)
-            elseif v isa TypeVar
-                print(v.name)
-            else
-                print(generated[basetype(v)].rsname)
-                printsubgeneric(generated[basetype(v)], generated[basetype(v)], generated, v)
-            end
-
-            n -= 1
-            if n > 0 print(", ") end
-            m += 1
-        end
-        print(">")
+    if length(generics) > 0
+        string(field.fieldtype.rsname, "<", join(generics, ", "), ">")
+    else
+        field.fieldtype.rsname
     end
 end
 
-function printbinding(binding::BuiltinBinding, key, generated)
+function strstructname(binding::StructBinding)::String
+    generics = strgenerics(binding)
+    if generics !== nothing
+        string(binding.rsname, generics)
+    else
+        binding.rsname
+    end
 end
 
-function printbinding(binding::Nothing, key, generated)
+function strfieldtype(binding::StructBinding, field::StructField, bindings::Dict{Type, Binding})::String
+    if field.fieldtype isa StructBinding
+        generics = strgenerics(binding, field, bindings)
+        if length(generics > 0)
+            string(field.fieldtype.rsname, generics)
+        else
+            field.fieldtype.rsname
+        end
+    else
+        field.fieldtype.name
+    end
 end
 
-function printfield(field::StructField, generated)
-    print("    $(field.rsname): $(field.binding.rsname)")
-    printgeneric(field, field.binding, generated)
-    println(",")
+function strstructfield(binding::StructBinding, field::StructField, bindings::Dict{Type, Binding})::String
+    sig = strsignature(binding, field, bindings)
+    string("    ", field.rsname, ": ", sig, ",")
 end
 
-function printbinding(binding::StructBinding, key, generated)
-    println(key, ":")
+function strbinding(binding::BuiltinBinding, bindings)::Union{Nothing, String}
 
-    println("#[repr(C)]")
-    println("#[derive(Copy, Clone, JuliaStruct)]")
-    println("#[jlrs(julia_type = \"$(binding.mod).$(binding.jlname)\")]")
-    print("struct ", binding.rsname)
-    printgeneric(binding, binding, generated)
-    println(" {")
+end
+
+function strbinding(binding::StructBinding, bindings::Dict{Type, Binding})::Union{Nothing, String}
+    parts = ["#[repr(C)]", string("struct ", strstructname(binding), " {")]
     for field in binding.fields
-        printfield(field, generated)
+        push!(parts, strstructfield(binding, field, bindings))
     end
-    println("}")
-    println()
+    push!(parts, "}")
+    join(parts, "\n")
 end
 
-function printbindings(generated)
-    for (key, binding) in generated
-        printbinding(binding, key, generated)
-    end
+struct A{N,U}
+    a::U
 end
 
-struct A
-    f1::Int
-    f2::Float64
+struct B{T}
+    b::A{2,T}
 end
 
-struct B{T} 
-    t::T
+struct C 
+    i::B{A{7,B{Int}}}
 end
 
-struct C0
-    a::Int32
+struct D{T}
+    x::A{N, T} where N
 end
 
-struct C
-    t::B{C0}
-end
-
-struct D{U}
-    t::B{U}
-end
-
-struct E{U,V}
-    t::B{V}
+mutable struct E
+    i::Real
 end
 
 struct F
-    t::B
+    e::E
 end
 
-struct G
-    t::B{Real}
-end
-
-struct H
-    t::B{B{Real}}
-end
-
-struct I
-    t::B{B{B{Int32}}}
-end
-
-struct J{T <: Real}
-    t::T
-end
-
-struct K end
-
-struct L{U} 
-    t::B{B{U}}
-end
-
-generated = bindings([A, B{Int64}, C, D{Int64}, E{Int32,2}, F, G, H, I, J, K, L])
-# generated = bindings([E{Int32,2}])
-printbindings(generated)
-
+reflect([A, B, C, D, E, F])
 end
