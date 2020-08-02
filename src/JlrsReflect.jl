@@ -534,29 +534,6 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
     end
 end
 
-function strgenerics(binding::StructBinding, field::StructField, bindings::Dict{Type,Binding})::Union{Nothing,String}
-    generics = []
-    fieldbinding = field.fieldtype
-
-    if fieldbinding.framelifetime
-        push!(generics, "'frame")
-    end
-
-    if fieldbinding.datalifetime
-        push!(generics, "'data")
-    end
-
-    for param in binding.typeparams
-        if !param.elide
-            push!(generics, string(param.name))
-        end
-    end
-
-    if length(generics) > 0
-        string("<", join(generics, ", "), ">")
-    end
-end
-
 function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
     base = basetype(ty)
     binding = bindings[base]
@@ -647,28 +624,6 @@ function strstructname(binding::StructBinding)::String
         string(binding.rsname, generics)
     else
         binding.rsname
-    end
-end
-
-function strstructname(binding::TupleBinding)::String
-    st = strgenerics(binding) 
-    if st === nothing 
-        ""
-    else
-        st
-    end
-end
-
-function strfieldtype(binding::StructBinding, field::StructField, bindings::Dict{Type,Binding})::String
-    if field.fieldtype isa StructBinding
-        generics = strgenerics(binding, field, bindings)
-        if length(generics > 0)
-            string(field.fieldtype.rsname, generics)
-        else
-            field.fieldtype.rsname
-        end
-    else
-        field.fieldtype.name
     end
 end
 
