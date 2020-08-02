@@ -1,6 +1,11 @@
-using JlrsReflect
-using Test
+include("../src/JlrsReflect.jl")
 
-@testset "JlrsReflect.jl" begin
-    # Write your tests here.
-end
+using Test
+include("SingleFieldBits.jl")
+include("MultiFieldBits.jl")
+include("BitsWithCustom.jl")
+include("BitsWithTuples.jl")
+include("WithBuiltinFields.jl")
+include("WithGenericFields.jl")
+include("WithBitsUnion.jl")
+include("WithNonBitsUnion.jl")
