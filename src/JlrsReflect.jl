@@ -167,32 +167,6 @@ function toposort!(data::Dict{DataType,Set{DataType}})::Vector{Type}
     rst
 end
 
-function issufficientlybitstype(type::DataType)
-    if isbitstype(type)
-        return true
-    end
-
-    for ftype in type.types
-        if ftype isa DataType
-            if !ftype.isinlinealloc
-                return false
-            elseif !issufficientlybitstype(ftype)
-                return false
-            end
-        elseif ftype isa UnionAll
-            return false
-        elseif ftype isa Union
-            if !Base.isbitsunion(ftype)
-                return false
-            end
-        elseif ftype isa TypeVar
-            return false
-        end
-    end
-
-    true
-end
-
 function partialtype(type::UnionAll)::DataType 
     t = type
         
