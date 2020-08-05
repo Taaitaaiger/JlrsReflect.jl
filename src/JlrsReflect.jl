@@ -33,7 +33,7 @@ struct BitsUnionBinding <: Binding
     datalifetime::Bool
 end
 
-struct StructBinding <: Binding
+mutable struct StructBinding <: Binding
     name::Symbol
     typename::Core.TypeName
     rsname::String
@@ -74,7 +74,7 @@ struct StringBindings
 end
 
 function StringBindings(bindings::Bindings)
-    strbindings = Dict{Type, String}()
+    strbindings = Dict{Type,String}()
     names = []
 
     for name in keys(bindings.bindings)
@@ -106,7 +106,25 @@ function Base.show(io::IO, bindings::Bindings)
         end
     end
 
-    print(join(rustimpls, "\n"))
+    print(io, join(rustimpls, "\n\n"))
+end
+
+function Base.write(io::IO, bindings::Bindings)
+    rustimpls = []
+    names = []
+
+    for name in keys(bindings.bindings)
+        push!(names, name)
+    end
+
+    for name in sort(names, lt=(a, b) -> string(a) < string(b))
+        rustimpl = strbinding(bindings.bindings[name], bindings.bindings)
+        if rustimpl !== nothing
+            push!(rustimpls, rustimpl)
+        end
+    end
+
+    write(io, join(rustimpls, "\n\n"), "\n")
 end
 
 function insertbuiltins!(bindings::Dict{Type,Binding})::Nothing
@@ -193,7 +211,7 @@ function basetype(type::UnionAll)::DataType
 end
 
 const BUILTINS = begin
-    d = Dict{Type, Binding}()
+    d = Dict{Type,Binding}()
     insertbuiltins!(d)
     d
 end
@@ -401,6 +419,7 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
         elseif bt.name.name == :Array
             fieldbinding = bindings[bt]
             error("panic!")
+            # FIXME: check if tparams induce lifetime 
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, bt.parameters))
             references = extractparams(bt, bindings)
             StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
@@ -430,6 +449,7 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
         if bt in keys(bindings)
             fieldbinding = bindings[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
+            # FIXME: check if tparams induce lifetime 
             references = extractparams(fieldtype, bindings)
             StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
         elseif !fieldtype.isinlinealloc
@@ -437,6 +457,7 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
         else
             fieldbinding = bindings[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
+            # FIXME: check if tparams induce lifetime 
             references = extractparams(fieldtype, bindings)
             StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
         end
@@ -471,6 +492,84 @@ function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
     nothing
 end
 
+function haslifetimes(ty::Type, bindings::Dict{Type,Main.JlrsReflect.Binding})
+    framelifetime = false
+
+    if ty <: Tuple
+        if ty.isconcretetype
+            for fty in ty.types
+                framelt, datalt = haslifetimes(fty, bindings)
+                if datalt
+                    return (true, true)
+                end
+
+                framelifetime |= framelt
+            end
+        else
+            return (true, true)
+        end
+    else
+        bt = basetype(ty)
+        binding = bindings[bt]
+        
+        if binding.datalifetime
+            return (true, true)
+        end
+        
+        framelifetime |= binding.framelifetime
+        
+        if binding isa StructBinding
+            for param in ty.parameters
+                if param isa Type
+                    framelt, datalt = haslifetimes(param, bindings)
+                    if datalt
+                        return (true, true)
+                    end
+
+                    framelifetime |= framelt
+                end
+            end
+        end
+    end
+
+    (framelifetime, false)
+end
+
+function setparamlifetimes!(bindings::Dict{Type,Main.JlrsReflect.Binding})
+    for (ty, binding) in bindings
+        if binding isa StructBinding
+            framelifetime = binding.framelifetime
+            datalifetime = binding.datalifetime
+
+            if datalifetime
+                continue
+            end
+
+            for field in binding.fields
+                for param in field.typeparams
+                    if param.value !== nothing && !(param.value isa TypeVar)
+                        framelt, datalt = haslifetimes(param.value, bindings)
+                        if datalt
+                            framelifetime = true
+                            datalifetime = true
+                            break
+                        end
+
+                        framelifetime |= framelt
+                    end
+                end
+                
+                if binding.datalifetime
+                    break
+                end
+            end
+
+            binding.framelifetime = framelifetime
+            binding.datalifetime = datalifetime
+        end
+    end
+end
+
 function reflect(types::Vector{<:Type})::Bindings
     deps = Dict{DataType,Set{DataType}}()
     for ty in types
@@ -484,6 +583,7 @@ function reflect(types::Vector{<:Type})::Bindings
         createbinding!(bindings, ty)
     end
 
+    setparamlifetimes!(bindings)
     Bindings(bindings)
 end
 
@@ -509,6 +609,22 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
 end
 
 function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
+    if ty <: Tuple
+        generics = []
+
+        for ty in ty.types
+            push!(generics, strsignature(ty, bindings))
+        end
+
+        name = string("::jlrs::value::tuple::Tuple", length(generics))
+
+        if length(generics) > 0
+            return string(name, "<", join(generics, ", "), ">")
+        else
+            return name
+        end
+    end
+
     base = basetype(ty)
     binding = bindings[base]
 
@@ -523,14 +639,16 @@ function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
         push!(generics, "'data")
     end
 
-    for param in ty.parameters
-        if param isa TypeVar
-            idx = findfirst(a -> a.name == param.name, binding.typeparams)
-            if idx !== nothing
-                push!(generics, string(param.name))
+    for (tparam, param) in zip(binding.typeparams, ty.parameters)
+        if !tparam.elide
+            if param isa TypeVar
+                idx = findfirst(a -> a.name == param.name, binding.typeparams)
+                if idx !== nothing
+                    push!(generics, string(param.name))
+                end
+            elseif param isa DataType
+                push!(generics, strsignature(param, bindings))
             end
-        elseif param isa DataType
-            push!(generics, strsignature(param, bindings))
         end
     end
 
@@ -541,7 +659,7 @@ function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
     end
 end
 
-function strsignature(binding::StructBinding, field::Union{StructField, TupleField}, bindings::Dict{Type,Binding})::String
+function strsignature(binding::StructBinding, field::Union{StructField,TupleField}, bindings::Dict{Type,Binding})::String
     if field.fieldtype isa GenericBinding
         return string(field.fieldtype.name)
     elseif field.fieldtype isa TupleBinding
@@ -659,57 +777,4 @@ function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union
     push!(parts, "}")
     join(parts, "\n")
 end
-
-# struct A{N,U}
-#     a::U
-# end
-# 
-# struct B{T}
-#     b::A{2,T}
-# end
-# 
-# struct C 
-#     i::B{A{7,B{Int}}}
-# end
-# 
-# struct D{T}
-#     x::A{N,T} where N
-# end
-# 
-# mutable struct E
-#     i::Real
-# end
-# 
-# struct Foo
-#     i::Int32
-# end
-# 
-# struct F
-#     f::Tuple{Int16,Int16, Tuple{Module}}
-# end
-# 
-# struct Sixteen
-#     a0::Int8
-#     a1::Int8
-#     a2::Int8
-#     a3::Int8
-#     a4::Int8
-#     a5::Int8
-#     a6::Int8
-#     a7::Int8
-#     a8::Int8
-#     a9::Int8
-#     aa::Int8
-#     ab::Int8
-#     ac::Int8
-#     ad::Int8
-#     ae::Int8
-#     af::Int8
-# end
-# 
-# struct G{T}
-#     g::Union{Sixteen,Real}
-# end
-
-#println(reflect([A]))
 end

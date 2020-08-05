@@ -26,6 +26,14 @@ struct WithSetGenericTuple
     a::Tuple{WithGenericT{Int64}}
 end
 
+struct WithPropagatedLifetime
+    a::WithGenericT{Module}
+end
+
+struct WithPropagatedLifetimes
+    a::WithGenericT{Tuple{Int32, WithGenericT{Array{Int32, 2}}}}
+end
+
 @testset "Structs with generic fields" begin
     @test begin
         b = JlrsReflect.reflect([WithGenericT])
@@ -100,6 +108,30 @@ end
         #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
         struct WithSetGenericTuple {
             a: ::jlrs::value::tuple::Tuple1<WithGenericT<i64>>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithPropagatedLifetime])
+        sb = JlrsReflect.StringBindings(b)
+
+        sb[WithPropagatedLifetime] === """#[repr(C)]
+        #[jlrs(julia_type = "Main.WithPropagatedLifetime")]
+        #[derive(Copy, Clone, JuliaStruct)]
+        struct WithPropagatedLifetime<'frame> {
+            a: WithGenericT<::jlrs::value::module::Module<'frame>>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithPropagatedLifetimes])
+        sb = JlrsReflect.StringBindings(b)
+
+        sb[WithPropagatedLifetimes] === """#[repr(C)]
+        #[jlrs(julia_type = "Main.WithPropagatedLifetimes")]
+        #[derive(Copy, Clone, JuliaStruct)]
+        struct WithPropagatedLifetimes<'frame, 'data> {
+            a: WithGenericT<::jlrs::value::tuple::Tuple2<i32, WithGenericT<::jlrs::value::array::Array<'frame, 'data>>>>,
         }"""
     end
 end
