@@ -749,13 +749,13 @@ function strstructfield(binding::StructBinding, field::StructField, bindings::Di
             "    #[jlrs(bits_union_align)]\n", 
             "    ", align_field_name, ": ", alignment, ",\n",
             "    #[jlrs(bits_union)]\n", 
-            "    ", field.rsname, ": ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; ", sz, "]>,\n",
+            "    pub ", field.rsname, ": ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; ", sz, "]>,\n",
             "    #[jlrs(bits_union_flag)]\n", 
             "    ", flag_field_name, ": u8,",
         )
     else
         sig = strsignature(binding, field, bindings)
-        string("    ", field.rsname, ": ", sig, ",")
+        string("    pub ", field.rsname, ": ", sig, ",")
     end
 end
 
@@ -768,8 +768,8 @@ function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union
     parts = [
         "#[repr(C)]", 
         string("#[jlrs(julia_type = \"", binding.typename.module, ".", binding.typename.name, "\")]"), 
-        string("#[derive(Copy, Clone, JuliaStruct", isbits, ")]"),
-        string("struct ", strstructname(binding), " {")
+        string("#[derive(Copy, Clone, Debug, PartialEq, JuliaStruct", isbits, ")]"),
+        string("pub struct ", strstructname(binding), " {")
     ]
     for field in binding.fields
         push!(parts, strstructfield(binding, field, bindings))
