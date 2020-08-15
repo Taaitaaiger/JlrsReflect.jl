@@ -15,10 +15,10 @@ end
     
         sb[BitsUInt8TupleInt32Int64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32Int64")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsUInt8TupleInt32Int64 {
-            a: u8,
-            b: ::jlrs::value::tuple::Tuple2<i32, i64>,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsUInt8TupleInt32Int64 {
+            pub a: u8,
+            pub b: ::jlrs::value::tuple::Tuple2<i32, i64>,
         }"""
     end
 
@@ -28,10 +28,10 @@ end
     
         sb[BitsUInt8TupleInt32TupleInt16UInt16] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32TupleInt16UInt16")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsUInt8TupleInt32TupleInt16UInt16 {
-            a: u8,
-            b: ::jlrs::value::tuple::Tuple2<i32, ::jlrs::value::tuple::Tuple2<i16, u16>>,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsUInt8TupleInt32TupleInt16UInt16 {
+            pub a: u8,
+            pub b: ::jlrs::value::tuple::Tuple2<i32, ::jlrs::value::tuple::Tuple2<i16, u16>>,
         }"""
     end
 end

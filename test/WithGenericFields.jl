@@ -41,9 +41,12 @@ end
 
         sb[JlrsReflect.basetype(WithGenericT)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithGenericT")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithGenericT<T> {
-            a: T,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithGenericT<T>
+        where
+            T: ::jlrs::traits::ValidLayout + Copy,
+        {
+            pub a: T,
         }"""
     end
 
@@ -53,9 +56,12 @@ end
 
         sb[JlrsReflect.basetype(WithNestedGenericT)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithNestedGenericT")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithNestedGenericT<T> {
-            a: WithGenericT<T>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithNestedGenericT<T>
+        where
+            T: ::jlrs::traits::ValidLayout + Copy,
+        {
+            pub a: WithGenericT<T>,
         }"""
     end
 
@@ -65,9 +71,9 @@ end
 
         sb[WithSetGeneric] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithSetGeneric")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct WithSetGeneric {
-            a: WithGenericT<i64>,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct WithSetGeneric {
+            pub a: WithGenericT<i64>,
         }"""
     end
 
@@ -77,9 +83,9 @@ end
 
         sb[JlrsReflect.basetype(WithValueType)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithValueType")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithValueType {
-            a: i64,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithValueType {
+            pub a: i64,
         }"""
     end
 
@@ -89,9 +95,9 @@ end
 
         sb[WithGenericUnionAll] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithGenericUnionAll")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithGenericUnionAll<'frame, 'data> {
-            a: ::jlrs::value::Value<'frame, 'data>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithGenericUnionAll<'frame, 'data> {
+            pub a: ::jlrs::value::Value<'frame, 'data>,
         }"""
     end
 
@@ -105,9 +111,9 @@ end
 
         sb[WithSetGenericTuple] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithSetGenericTuple")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct WithSetGenericTuple {
-            a: ::jlrs::value::tuple::Tuple1<WithGenericT<i64>>,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct WithSetGenericTuple {
+            pub a: ::jlrs::value::tuple::Tuple1<WithGenericT<i64>>,
         }"""
     end
 
@@ -117,9 +123,9 @@ end
 
         sb[WithPropagatedLifetime] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetime")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithPropagatedLifetime<'frame> {
-            a: WithGenericT<::jlrs::value::module::Module<'frame>>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithPropagatedLifetime<'frame> {
+            pub a: WithGenericT<::jlrs::value::module::Module<'frame>>,
         }"""
     end
 
@@ -129,9 +135,9 @@ end
 
         sb[WithPropagatedLifetimes] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetimes")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithPropagatedLifetimes<'frame, 'data> {
-            a: WithGenericT<::jlrs::value::tuple::Tuple2<i32, WithGenericT<::jlrs::value::array::Array<'frame, 'data>>>>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithPropagatedLifetimes<'frame, 'data> {
+            pub a: WithGenericT<::jlrs::value::tuple::Tuple2<i32, WithGenericT<::jlrs::value::array::Array<'frame, 'data>>>>,
         }"""
     end
 end

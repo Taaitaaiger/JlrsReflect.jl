@@ -9,9 +9,9 @@ end
 
         sb[JlrsReflect.basetype(NonBitsUnion)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.NonBitsUnion")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct NonBitsUnion<'frame, 'data> {
-            a: ::jlrs::value::Value<'frame, 'data>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct NonBitsUnion<'frame, 'data> {
+            pub a: ::jlrs::value::Value<'frame, 'data>,
         }"""
     end
 end

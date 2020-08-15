@@ -25,9 +25,9 @@ end
 
         sb[JlrsReflect.basetype(SingleVariant)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.SingleVariant")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct SingleVariant {
-            a: i32,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct SingleVariant {
+            pub a: i32,
         }"""
     end
 
@@ -37,12 +37,12 @@ end
 
         sb[JlrsReflect.basetype(DoubleVariant)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.DoubleVariant")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct DoubleVariant {
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct DoubleVariant {
             #[jlrs(bits_union_align)]
             _a_align: ::jlrs::value::union::Align4,
             #[jlrs(bits_union)]
-            a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 4]>,
+            pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 4]>,
             #[jlrs(bits_union_flag)]
             _a_flag: u8,
         }"""
@@ -54,12 +54,12 @@ end
 
         sb[JlrsReflect.basetype(SizeAlignMismatch)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.SizeAlignMismatch")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct SizeAlignMismatch {
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct SizeAlignMismatch {
             #[jlrs(bits_union_align)]
             _a_align: ::jlrs::value::union::Align4,
             #[jlrs(bits_union)]
-            a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 6]>,
+            pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 6]>,
             #[jlrs(bits_union_flag)]
             _a_flag: u8,
         }"""
@@ -71,9 +71,9 @@ end
 
         sb[JlrsReflect.basetype(UnionInTuple)] === """#[repr(C)]
         #[jlrs(julia_type = "Main.UnionInTuple")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct UnionInTuple<'frame, 'data> {
-            a: ::jlrs::value::Value<'frame, 'data>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct UnionInTuple<'frame, 'data> {
+            pub a: ::jlrs::value::Value<'frame, 'data>,
         }"""
     end
 

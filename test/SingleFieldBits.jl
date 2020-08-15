@@ -58,24 +58,24 @@ end
     @test begin
         b = JlrsReflect.reflect([BitsTypeBool])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsTypeBool] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeBool")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeBool {
-            a: bool,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeBool {
+            pub a: bool,
         }"""
     end
         
     @test begin
         b = JlrsReflect.reflect([BitsTypeChar])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsTypeChar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeChar")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeChar {
-            a: char,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeChar {
+            pub a: char,
         }"""
     end
     
@@ -85,9 +85,9 @@ end
     
         sb[BitsTypeUInt8] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeUInt8")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeUInt8 {
-            a: u8,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeUInt8 {
+            pub a: u8,
         }"""
     end
     
@@ -97,9 +97,9 @@ end
     
         sb[BitsTypeUInt16] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeUInt16")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeUInt16 {
-            a: u16,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeUInt16 {
+            pub a: u16,
         }"""
     end
     
@@ -109,9 +109,9 @@ end
     
         sb[BitsTypeUInt32] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeUInt32")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeUInt32 {
-            a: u32,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeUInt32 {
+            pub a: u32,
         }"""
     end
     
@@ -121,9 +121,9 @@ end
     
         sb[BitsTypeUInt64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeUInt64")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeUInt64 {
-            a: u64,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeUInt64 {
+            pub a: u64,
         }"""
     end
     
@@ -133,9 +133,9 @@ end
     
         sb[BitsTypeUInt] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeUInt")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeUInt {
-            a: u64,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeUInt {
+            pub a: u64,
         }"""
     end    
 
@@ -145,9 +145,9 @@ end
     
         sb[BitsTypeInt8] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeInt8")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeInt8 {
-            a: i8,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeInt8 {
+            pub a: i8,
         }"""
     end
     
@@ -157,9 +157,9 @@ end
     
         sb[BitsTypeInt16] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeInt16")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeInt16 {
-            a: i16,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeInt16 {
+            pub a: i16,
         }"""
     end
     
@@ -169,9 +169,9 @@ end
     
         sb[BitsTypeInt32] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeInt32")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeInt32 {
-            a: i32,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeInt32 {
+            pub a: i32,
         }"""
     end
     
@@ -181,9 +181,9 @@ end
     
         sb[BitsTypeInt64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeInt64")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeInt64 {
-            a: i64,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeInt64 {
+            pub a: i64,
         }"""
     end
     
@@ -193,9 +193,9 @@ end
     
         sb[BitsTypeInt] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeInt")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeInt {
-            a: i64,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeInt {
+            pub a: i64,
         }"""
     end
             
@@ -205,9 +205,9 @@ end
 
         sb[BitsTypeFloat32] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeFloat32")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeFloat32 {
-            a: f32,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeFloat32 {
+            pub a: f32,
         }"""
     end
             
@@ -217,9 +217,9 @@ end
 
         sb[BitsTypeFloat64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsTypeFloat64")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsTypeFloat64 {
-            a: f64,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsTypeFloat64 {
+            pub a: f64,
         }"""
     end
 end

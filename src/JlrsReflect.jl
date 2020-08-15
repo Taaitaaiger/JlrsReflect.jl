@@ -609,7 +609,7 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
         wh = if length(wheres) > 0 
             string("\nwhere\n", join(wheres), "\n")
         else
-            ""
+            " "
         end
         string("<", join(generics, ", "), ">", wh)
     end

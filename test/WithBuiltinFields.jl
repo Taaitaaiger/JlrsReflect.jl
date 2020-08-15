@@ -77,9 +77,9 @@ end
 
         sb[WithArray] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithArray")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithArray<'frame, 'data> {
-            a: ::jlrs::value::array::Array<'frame, 'data>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithArray<'frame, 'data> {
+            pub a: ::jlrs::value::array::Array<'frame, 'data>,
         }"""
     end
 
@@ -89,9 +89,9 @@ end
 
         sb[WithCodeInstance] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithCodeInstance")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithCodeInstance<'frame> {
-            a: ::jlrs::value::code_instance::CodeInstance<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithCodeInstance<'frame> {
+            pub a: ::jlrs::value::code_instance::CodeInstance<'frame>,
         }"""
     end
 
@@ -101,9 +101,9 @@ end
 
         sb[WithDataType] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithDataType")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithDataType<'frame> {
-            a: ::jlrs::value::datatype::DataType<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithDataType<'frame> {
+            pub a: ::jlrs::value::datatype::DataType<'frame>,
         }"""
     end
 
@@ -113,9 +113,9 @@ end
 
         sb[WithExpr] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithExpr")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithExpr<'frame> {
-            a: ::jlrs::value::expr::Expr<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithExpr<'frame> {
+            pub a: ::jlrs::value::expr::Expr<'frame>,
         }"""
     end
     
@@ -125,9 +125,9 @@ end
 
         sb[WithString] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithString")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithString<'frame> {
-            a: ::jlrs::value::string::JuliaString<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithString<'frame> {
+            pub a: ::jlrs::value::string::JuliaString<'frame>,
         }"""
     end
         
@@ -137,9 +137,9 @@ end
 
         sb[WithMethod] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithMethod")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithMethod<'frame> {
-            a: ::jlrs::value::method::Method<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithMethod<'frame> {
+            pub a: ::jlrs::value::method::Method<'frame>,
         }"""
     end
             
@@ -149,9 +149,9 @@ end
 
         sb[WithMethodInstance] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithMethodInstance")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithMethodInstance<'frame> {
-            a: ::jlrs::value::method_instance::MethodInstance<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithMethodInstance<'frame> {
+            pub a: ::jlrs::value::method_instance::MethodInstance<'frame>,
         }"""
     end
                 
@@ -161,9 +161,9 @@ end
 
         sb[WithMethodTable] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithMethodTable")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithMethodTable<'frame> {
-            a: ::jlrs::value::method_table::MethodTable<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithMethodTable<'frame> {
+            pub a: ::jlrs::value::method_table::MethodTable<'frame>,
         }"""
     end
                     
@@ -173,9 +173,9 @@ end
 
         sb[WithModule] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithModule")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithModule<'frame> {
-            a: ::jlrs::value::module::Module<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithModule<'frame> {
+            pub a: ::jlrs::value::module::Module<'frame>,
         }"""
     end
                         
@@ -185,9 +185,9 @@ end
 
         sb[WithSimpleVector] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithSimpleVector")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithSimpleVector<'frame> {
-            a: ::jlrs::value::simple_vector::SimpleVector<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithSimpleVector<'frame> {
+            pub a: ::jlrs::value::simple_vector::SimpleVector<'frame>,
         }"""
     end
                             
@@ -197,9 +197,9 @@ end
 
         sb[WithSymbol] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithSymbol")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithSymbol<'frame> {
-            a: ::jlrs::value::symbol::Symbol<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithSymbol<'frame> {
+            pub a: ::jlrs::value::symbol::Symbol<'frame>,
         }"""
     end
                                 
@@ -209,9 +209,9 @@ end
 
         sb[WithTask] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithTask")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithTask<'frame> {
-            a: ::jlrs::value::task::Task<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithTask<'frame> {
+            pub a: ::jlrs::value::task::Task<'frame>,
         }"""
     end
                                     
@@ -221,9 +221,9 @@ end
 
         sb[WithTypeMapEntry] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithTypeMapEntry")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithTypeMapEntry<'frame> {
-            a: ::jlrs::value::typemap_entry::TypeMapEntry<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithTypeMapEntry<'frame> {
+            pub a: ::jlrs::value::typemap_entry::TypeMapEntry<'frame>,
         }"""
     end
                                         
@@ -233,9 +233,9 @@ end
 
         sb[WithTypeMapLevel] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithTypeMapLevel")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithTypeMapLevel<'frame> {
-            a: ::jlrs::value::typemap_level::TypeMapLevel<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithTypeMapLevel<'frame> {
+            pub a: ::jlrs::value::typemap_level::TypeMapLevel<'frame>,
         }"""
     end
                                             
@@ -245,9 +245,9 @@ end
 
         sb[WithTypeName] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithTypeName")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithTypeName<'frame> {
-            a: ::jlrs::value::type_name::TypeName<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithTypeName<'frame> {
+            pub a: ::jlrs::value::type_name::TypeName<'frame>,
         }"""
     end
                                                 
@@ -257,9 +257,9 @@ end
 
         sb[WithTypeVar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithTypeVar")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithTypeVar<'frame> {
-            a: ::jlrs::value::type_var::TypeVar<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithTypeVar<'frame> {
+            pub a: ::jlrs::value::type_var::TypeVar<'frame>,
         }"""
     end
                                                  
@@ -269,9 +269,9 @@ end
 
         sb[WithUnion] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithUnion")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithUnion<'frame> {
-            a: ::jlrs::value::union::Union<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithUnion<'frame> {
+            pub a: ::jlrs::value::union::Union<'frame>,
         }"""
     end
                                                      
@@ -281,9 +281,9 @@ end
 
         sb[WithUnionAll] === """#[repr(C)]
         #[jlrs(julia_type = "Main.WithUnionAll")]
-        #[derive(Copy, Clone, JuliaStruct)]
-        struct WithUnionAll<'frame> {
-            a: ::jlrs::value::union_all::UnionAll<'frame>,
+        #[derive(Copy, Clone, Debug, JuliaStruct)]
+        pub struct WithUnionAll<'frame> {
+            pub a: ::jlrs::value::union_all::UnionAll<'frame>,
         }"""
     end
 end

@@ -15,18 +15,18 @@ end
     
         sb[BitsIntChar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsIntChar")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsIntChar {
-            a: i64,
-            b: char,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsIntChar {
+            pub a: i64,
+            pub b: char,
         }"""
     
         sb[BitsCharBitsIntChar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsCharBitsIntChar")]
-        #[derive(Copy, Clone, JuliaStruct, IntoJulia)]
-        struct BitsCharBitsIntChar {
-            a: char,
-            b: BitsIntChar,
+        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
+        pub struct BitsCharBitsIntChar {
+            pub a: char,
+            pub b: BitsIntChar,
         }"""
     end
 end
