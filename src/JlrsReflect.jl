@@ -589,6 +589,7 @@ end
 
 function strgenerics(binding::StructBinding)::Union{Nothing,String}
     generics = []
+    wheres = []
     if binding.framelifetime
         push!(generics, "'frame")
     end
@@ -600,11 +601,17 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
     for param in binding.typeparams
         if !param.elide
             push!(generics, string(param.name))
+            push!(wheres, string("    ", param.name, ": ::jlrs::traits::ValidLayout + Copy,"))
         end
     end
 
     if length(generics) > 0
-        string("<", join(generics, ", "), ">")
+        wh = if length(wheres) > 0 
+            string("\nwhere\n", join(wheres), "\n")
+        else
+            ""
+        end
+        string("<", join(generics, ", "), ">", wh)
     end
 end
 
@@ -715,7 +722,7 @@ function strstructname(binding::StructBinding)::String
     if generics !== nothing
         string(binding.rsname, generics)
     else
-        binding.rsname
+        string(binding.rsname, " ")
     end
 end
 
@@ -768,8 +775,8 @@ function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union
     parts = [
         "#[repr(C)]", 
         string("#[jlrs(julia_type = \"", binding.typename.module, ".", binding.typename.name, "\")]"), 
-        string("#[derive(Copy, Clone, Debug, PartialEq, JuliaStruct", isbits, ")]"),
-        string("pub struct ", strstructname(binding), " {")
+        string("#[derive(Copy, Clone, Debug, JuliaStruct", isbits, ")]"),
+        string("pub struct ", strstructname(binding), "{")
     ]
     for field in binding.fields
         push!(parts, strstructfield(binding, field, bindings))
