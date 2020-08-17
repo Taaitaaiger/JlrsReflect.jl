@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>JlrsReflect.jl Documentation · JlrsReflect</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">JlrsReflect</span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>JlrsReflect.jl Documentation</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>JlrsReflect.jl Documentation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>JlrsReflect.jl Documentation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/taaitaaiger/JlrsReflect.jl/blob/master/docs/src/index.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="JlrsReflect.jl-Documentation"><a class="docs-heading-anchor" href="#JlrsReflect.jl-Documentation">JlrsReflect.jl Documentation</a><a id="JlrsReflect.jl-Documentation-1"></a><a class="docs-heading-anchor-permalink" href="#JlrsReflect.jl-Documentation" title="Permalink"></a></h1><p>One of the features of jlrs, a crate that provides bindings to the Julia C API for the Rust programming language, is that it supports mapping a struct from Julia to a Rust struct which lets you access its contents directly. Writing down the correct implementation of these structs in Rust can be challenging, this package can be used to automate the process.</p><p>Many types are supported, the major exceptions are types with tuple or union fields that depend on a free type parameter. These fields can have very different representations depending on these parameters which makes generating an appropriate mapping impossible. Everything else is fine, though; Types with bits union fields, <code>UnionAll</code> fields, type parameters, and &quot;special&quot; types backed by a struct defined in C like <code>Module</code> and <code>Array</code> are all supported.</p><p>There is a single entrypoint, the <code>reflect</code> method which takes a <code>Vector</code> of <code>Type</code>s. Mappings will be generated for all of these types and their dependencies. The result of a call to this method can be written to a .rs-file and used as a module without any tweaking. </p><p>This package is compatible with Julia v1.5 and jlrs v0.6.</p><article class="docstring"><header><a class="docstring-binding" id="Main.JlrsReflect.reflect" href="#Main.JlrsReflect.reflect"><code>Main.JlrsReflect.reflect</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">reflect(types::Vector{&lt;:Type})::Bindings</code></pre><p>Generate Rust mappings for all types in <code>types</code> and their dependencies. The only requirement is  that these types must not contain any union or tuple fields that depend on a free type parameter. The mappings will derive <code>JuliaStruct</code>, and <code>IntoJulia</code> if it&#39;s a bits type.</p><p>The result of this method can be written to a file, its contents will be a valid Rust module.</p><p>When you use these mappings with jlrs, these types must be available with the same path. For  example, if you generate bindings for <code>Main.Bar.Baz</code>, they must be available on that path and not some other path like <code>Main.Foo.Bar.Baz</code>. </p><p><strong>Example</strong></p><pre><code class="language-julia-repl">julia&gt; using JlrsReflect
+
+julia&gt; reflect([StackTraces.StackFrame])
+#[repr(C)]
+#[jlrs(julia_type = &quot;Base.StackTraces.StackFrame&quot;)]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct StackFrame&lt;&#39;frame, &#39;data&gt; {
+    pub func: ::jlrs::value::symbol::Symbol&lt;&#39;frame&gt;,
+    pub file: ::jlrs::value::symbol::Symbol&lt;&#39;frame&gt;,
+    pub line: i64,
+    pub linfo: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub from_c: bool,
+    pub inlined: bool,
+    pub pointer: u64,
+}
+
+#[repr(C)]
+#[jlrs(julia_type = &quot;Core.CodeInfo&quot;)]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct CodeInfo&lt;&#39;frame, &#39;data&gt; {
+    pub code: ::jlrs::value::array::Array&lt;&#39;frame, &#39;data&gt;,
+    pub codelocs: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub ssavaluetypes: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub ssaflags: ::jlrs::value::array::Array&lt;&#39;frame, &#39;data&gt;,
+    pub method_for_inference_limit_heuristics: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub linetable: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub slotnames: ::jlrs::value::array::Array&lt;&#39;frame, &#39;data&gt;,
+    pub slotflags: ::jlrs::value::array::Array&lt;&#39;frame, &#39;data&gt;,
+    pub slottypes: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub rettype: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub parent: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub edges: ::jlrs::value::Value&lt;&#39;frame, &#39;data&gt;,
+    pub min_world: u64,
+    pub max_world: u64,
+    pub inferred: bool,
+    pub inlineable: bool,
+    pub propagate_inbounds: bool,
+    pub pure: bool,
+}
+
+#[repr(C)]
+#[jlrs(julia_type = &quot;Core.Nothing&quot;)]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct Nothing {
+}</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/taaitaaiger/JlrsReflect.jl/blob/fc788be70334f757ec1ccb1b3c07d804d74a5948/src/JlrsReflect.jl#L575-L636">source</a></section></article></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 16 August 2020 11:35">Sunday 16 August 2020</span>. Using Julia version 1.5.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

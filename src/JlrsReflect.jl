@@ -1,5 +1,7 @@
 module JlrsReflect
 
+export reflect, renamestruct, renamefields
+
 abstract type Binding end
 
 struct StructParameter
@@ -16,7 +18,7 @@ struct GenericBinding <: Binding
     name::Symbol
 end
 
-struct StructField
+mutable struct StructField
     name::Symbol
     rsname::String
     fieldtype::Binding
@@ -418,8 +420,6 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
             error("Unions with type parameters are not supported")
         elseif bt.name.name == :Array
             fieldbinding = bindings[bt]
-            error("panic!")
-            # FIXME: check if tparams induce lifetime 
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, bt.parameters))
             references = extractparams(bt, bindings)
             StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
@@ -449,17 +449,12 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
         if bt in keys(bindings)
             fieldbinding = bindings[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
-            # FIXME: check if tparams induce lifetime 
             references = extractparams(fieldtype, bindings)
             StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
         elseif !fieldtype.isinlinealloc
             StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
         else
-            fieldbinding = bindings[bt]
-            tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
-            # FIXME: check if tparams induce lifetime 
-            references = extractparams(fieldtype, bindings)
-            StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
+            error("Cannot create field binding")
         end
     else
         error("Unknown field type")
@@ -570,6 +565,68 @@ function setparamlifetimes!(bindings::Dict{Type,Main.JlrsReflect.Binding})
     end
 end
 
+"""
+    reflect(types::Vector{<:Type})::Bindings
+
+Generate Rust mappings for all types in `types` and their dependencies. The only requirement is 
+that these types must not contain any union or tuple fields that depend on a free type parameter.
+The mappings will derive `JuliaStruct`, and `IntoJulia` if it's a bits type.
+
+The result of this method can be written to a file, its contents will be a valid Rust module.
+
+When you use these mappings with jlrs, these types must be available with the same path. For 
+example, if you generate bindings for `Main.Bar.Baz`, they must be available on that path and not
+some other path like `Main.Foo.Bar.Baz`. 
+
+# Example
+```jldoctest
+julia> using JlrsReflect
+
+julia> reflect([StackTraces.StackFrame])
+#[repr(C)]
+#[jlrs(julia_type = "Base.StackTraces.StackFrame")]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct StackFrame<'frame, 'data> {
+    pub func: ::jlrs::value::symbol::Symbol<'frame>,
+    pub file: ::jlrs::value::symbol::Symbol<'frame>,
+    pub line: i64,
+    pub linfo: ::jlrs::value::Value<'frame, 'data>,
+    pub from_c: bool,
+    pub inlined: bool,
+    pub pointer: u64,
+}
+
+#[repr(C)]
+#[jlrs(julia_type = "Core.CodeInfo")]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct CodeInfo<'frame, 'data> {
+    pub code: ::jlrs::value::array::Array<'frame, 'data>,
+    pub codelocs: ::jlrs::value::Value<'frame, 'data>,
+    pub ssavaluetypes: ::jlrs::value::Value<'frame, 'data>,
+    pub ssaflags: ::jlrs::value::array::Array<'frame, 'data>,
+    pub method_for_inference_limit_heuristics: ::jlrs::value::Value<'frame, 'data>,
+    pub linetable: ::jlrs::value::Value<'frame, 'data>,
+    pub slotnames: ::jlrs::value::array::Array<'frame, 'data>,
+    pub slotflags: ::jlrs::value::array::Array<'frame, 'data>,
+    pub slottypes: ::jlrs::value::Value<'frame, 'data>,
+    pub rettype: ::jlrs::value::Value<'frame, 'data>,
+    pub parent: ::jlrs::value::Value<'frame, 'data>,
+    pub edges: ::jlrs::value::Value<'frame, 'data>,
+    pub min_world: u64,
+    pub max_world: u64,
+    pub inferred: bool,
+    pub inlineable: bool,
+    pub propagate_inbounds: bool,
+    pub pure: bool,
+}
+
+#[repr(C)]
+#[jlrs(julia_type = "Core.Nothing")]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct Nothing {
+}
+```
+"""
 function reflect(types::Vector{<:Type})::Bindings
     deps = Dict{DataType,Set{DataType}}()
     for ty in types
@@ -770,7 +827,7 @@ strbinding(binding::BuiltinBinding, bindings) = nothing
 
 function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union{Nothing,String}
     ty = getproperty(binding.typename.module, binding.typename.name)
-    isbits = ty isa DataType && !ty.hasfreetypevars && ty.isbitstype ? ", IntoJulia" : ""
+    isbits = ty isa DataType && !ty.hasfreetypevars && ty.isbitstype && length(ty.types) > 0 ? ", IntoJulia" : ""
 
     parts = [
         "#[repr(C)]", 
@@ -783,5 +840,81 @@ function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union
     end
     push!(parts, "}")
     join(parts, "\n")
+end
+
+"""
+    renamestruct(bindings::Bindings, type::Type, rename::String)
+
+Change a struct's name. This can be useful if the name of a struct results in invalid Rust code or
+causes warnings. 
+
+# Example
+```jldoctest
+julia> using JlrsReflect
+
+julia> struct Foo end;
+
+julia> bindings = reflect([Foo]);
+
+julia> renamestruct(bindings, Foo, "Bar")
+
+julia> bindings
+#[repr(C)]
+#[jlrs(julia_type = "Main.Foo")]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct Bar {
+}
+```
+"""
+function renamestruct(bindings::Bindings, type::Type, rename::String)
+    btype::DataType = basetype(type)
+    bindings.bindings[btype].rsname = rename
+    
+    nothing
+end
+
+"""
+    renamestruct(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
+    renamestruct(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String})
+
+Change some field names of a struct. This can be useful if the filed name name of a struct results
+in invalid Rust code or causes warnings. 
+
+# Example
+```jldoctest
+julia> using JlrsReflect
+
+julia> struct Food
+    🍔::Bool
+end;
+
+julia> bindings = reflect([Food]);
+
+julia> renamefields(bindings, Food, [:🍔 => "burger"])
+
+julia> bindings
+#[repr(C)]
+#[jlrs(julia_type = "Main.Foo")]
+#[derive(Copy, Clone, Debug, JuliaStruct)]
+pub struct Food {
+    burger: bool
+}
+```
+"""
+function renamefields end
+
+function renamefields(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
+    btype::DataType = basetype(type)
+    for field in bindings.bindings[btype].fields
+        if field.name in keys(rename)
+            field.rsname = rename[field.name]
+        end
+    end
+
+    nothing
+end
+
+function renamefields(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String}})
+    renamefields(bindings, type, Dict(rename))
 end
 end
