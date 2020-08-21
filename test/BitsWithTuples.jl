@@ -12,7 +12,7 @@ end
     @test begin
         b = JlrsReflect.reflect([BitsUInt8TupleInt32Int64])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsUInt8TupleInt32Int64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32Int64")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
@@ -25,7 +25,7 @@ end
     @test begin
         b = JlrsReflect.reflect([BitsUInt8TupleInt32TupleInt16UInt16])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsUInt8TupleInt32TupleInt16UInt16] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32TupleInt16UInt16")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]

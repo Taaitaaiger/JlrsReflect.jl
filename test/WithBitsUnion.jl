@@ -44,7 +44,7 @@ end
             #[jlrs(bits_union)]
             pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 4]>,
             #[jlrs(bits_union_flag)]
-            _a_flag: u8,
+            pub a_flag: u8,
         }"""
     end
 
@@ -61,7 +61,7 @@ end
             #[jlrs(bits_union)]
             pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 6]>,
             #[jlrs(bits_union_flag)]
-            _a_flag: u8,
+            pub a_flag: u8,
         }"""
     end
 

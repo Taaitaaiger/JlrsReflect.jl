@@ -12,7 +12,7 @@ end
     @test begin
         b = JlrsReflect.reflect([BitsCharBitsIntChar])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsIntChar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsIntChar")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
@@ -20,7 +20,7 @@ end
             pub a: i64,
             pub b: char,
         }"""
-    
+
         sb[BitsCharBitsIntChar] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsCharBitsIntChar")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]

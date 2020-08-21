@@ -5,9 +5,9 @@
 
 One of the main features of jlrs is the possibility to easily convert data from Julia to Rust. By default only a few builtin types, like integers, arrays and modules are available, but this can be extended by using the `JuliaStruct` derive macro. One annoying aspect of this macro is that you need to figure out the correct layout first.
 
-With JlrsReflect.jl you can automatically generate the appropriate bindings for many Julia types if you're using Julia 1.5. This includes types with unions, tuples, and type parameters. Even value types are not a problem because the bindings only contain type parameters that directly affect the layout and lifetimes referenced by the fields. Two things that are not supported are structs with union or tuple fields that depend on a type parameter, and bits unions being used as generic parameters. 
+With JlrsReflect.jl you can automatically generate the appropriate bindings for many Julia types if you're using Julia 1.5. This includes types with unions, tuples, and type parameters. Even value types are not a problem because the bindings only contain type parameters that directly affect the layout. If a field contains pointers, featureful wrappers from jlrs with reasonable lifetimes are used. Two things that are not supported are structs with union or tuple fields that depend on a type parameter (eg `struct SomeGenericStruct{T} a::Tuple{Int32, T} end`, `SomeGenericStruct{T} a::Union{Int32, T} end`), and unions used as generic parameters (eg `SomeGenericStruct{Union{A,B}}`).
 
-You can use this package by calling the `reflect` function with a `Vector` of types (both `DataType`s and `UnionAll`s are supported):
+You can use this package by calling the `reflect` function with a `Vector` of types:
 
 ```julia
 struct TypeA
@@ -20,15 +20,21 @@ end
 
 ...
 
-bindings = JlrsReflect.reflect([TypeA, TypeB, ...])
+bindings = JlrsReflect.reflect([TypeA, TypeB, ...]);
 
 # Print bindings to standard output
 println(bindings)
 
 # Write bindings to file
-open("julia_bindings.rs", "w") f do
+open("julia_bindings.rs", "w") do f
     write(f, bindings)
 end
 ```
 
-Bindings for types used as fields and type parameters are automatically generated. 
+Bindings for types used as fields and type parameters are automatically generated. If you want or need to rename structs or their fields you can use `renamestruct!` and `renamefields!` as follows:
+
+```julia
+bindings = JlrsReflect.reflect([TypeA, TypeB, ...])
+renamestruct!(bindings, TypeA, "StructA")
+renamefields!(bindings, TypeB, [:fielda => "field_a", :fieldb => "field_b"])
+```

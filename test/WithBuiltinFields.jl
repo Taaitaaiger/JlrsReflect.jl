@@ -118,7 +118,7 @@ end
             pub a: ::jlrs::value::expr::Expr<'frame>,
         }"""
     end
-    
+
     @test begin
         b = JlrsReflect.reflect([WithString])
         sb = JlrsReflect.StringBindings(b)
@@ -130,7 +130,7 @@ end
             pub a: ::jlrs::value::string::JuliaString<'frame>,
         }"""
     end
-        
+
     @test begin
         b = JlrsReflect.reflect([WithMethod])
         sb = JlrsReflect.StringBindings(b)
@@ -142,7 +142,7 @@ end
             pub a: ::jlrs::value::method::Method<'frame>,
         }"""
     end
-            
+
     @test begin
         b = JlrsReflect.reflect([WithMethodInstance])
         sb = JlrsReflect.StringBindings(b)
@@ -154,7 +154,7 @@ end
             pub a: ::jlrs::value::method_instance::MethodInstance<'frame>,
         }"""
     end
-                
+
     @test begin
         b = JlrsReflect.reflect([WithMethodTable])
         sb = JlrsReflect.StringBindings(b)
@@ -166,7 +166,7 @@ end
             pub a: ::jlrs::value::method_table::MethodTable<'frame>,
         }"""
     end
-                    
+
     @test begin
         b = JlrsReflect.reflect([WithModule])
         sb = JlrsReflect.StringBindings(b)
@@ -178,7 +178,7 @@ end
             pub a: ::jlrs::value::module::Module<'frame>,
         }"""
     end
-                        
+
     @test begin
         b = JlrsReflect.reflect([WithSimpleVector])
         sb = JlrsReflect.StringBindings(b)
@@ -190,7 +190,7 @@ end
             pub a: ::jlrs::value::simple_vector::SimpleVector<'frame>,
         }"""
     end
-                            
+
     @test begin
         b = JlrsReflect.reflect([WithSymbol])
         sb = JlrsReflect.StringBindings(b)
@@ -202,7 +202,7 @@ end
             pub a: ::jlrs::value::symbol::Symbol<'frame>,
         }"""
     end
-                                
+
     @test begin
         b = JlrsReflect.reflect([WithTask])
         sb = JlrsReflect.StringBindings(b)
@@ -214,7 +214,7 @@ end
             pub a: ::jlrs::value::task::Task<'frame>,
         }"""
     end
-                                    
+
     @test begin
         b = JlrsReflect.reflect([WithTypeMapEntry])
         sb = JlrsReflect.StringBindings(b)
@@ -226,7 +226,7 @@ end
             pub a: ::jlrs::value::typemap_entry::TypeMapEntry<'frame>,
         }"""
     end
-                                        
+
     @test begin
         b = JlrsReflect.reflect([WithTypeMapLevel])
         sb = JlrsReflect.StringBindings(b)
@@ -238,7 +238,7 @@ end
             pub a: ::jlrs::value::typemap_level::TypeMapLevel<'frame>,
         }"""
     end
-                                            
+
     @test begin
         b = JlrsReflect.reflect([WithTypeName])
         sb = JlrsReflect.StringBindings(b)
@@ -250,7 +250,7 @@ end
             pub a: ::jlrs::value::type_name::TypeName<'frame>,
         }"""
     end
-                                                
+
     @test begin
         b = JlrsReflect.reflect([WithTypeVar])
         sb = JlrsReflect.StringBindings(b)
@@ -262,7 +262,7 @@ end
             pub a: ::jlrs::value::type_var::TypeVar<'frame>,
         }"""
     end
-                                                 
+
     @test begin
         b = JlrsReflect.reflect([WithUnion])
         sb = JlrsReflect.StringBindings(b)
@@ -274,7 +274,7 @@ end
             pub a: ::jlrs::value::union::Union<'frame>,
         }"""
     end
-                                                     
+
     @test begin
         b = JlrsReflect.reflect([WithUnionAll])
         sb = JlrsReflect.StringBindings(b)

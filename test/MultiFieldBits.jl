@@ -13,7 +13,7 @@ end
     @test begin
         b = JlrsReflect.reflect([BitsIntBool])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsIntBool] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsIntBool")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
@@ -22,11 +22,11 @@ end
             pub b: bool,
         }"""
     end
-        
+
     @test begin
         b = JlrsReflect.reflect([BitsCharFloat32Float64])
         sb = JlrsReflect.StringBindings(b)
-    
+
         sb[BitsCharFloat32Float64] === """#[repr(C)]
         #[jlrs(julia_type = "Main.BitsCharFloat32Float64")]
         #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]

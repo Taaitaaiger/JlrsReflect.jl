@@ -1,6 +1,8 @@
 module JlrsReflect
 
-export reflect, renamestruct, renamefields
+export reflect, renamestruct!, renamefields!
+
+import Base: show, getindex, write
 
 abstract type Binding end
 
@@ -89,11 +91,11 @@ function StringBindings(bindings::Bindings)
     StringBindings(strbindings)
 end
 
-function Base.getindex(sb::StringBindings, els...)
+function getindex(sb::StringBindings, els...)
     sb.bindings[els...]
 end
 
-function Base.show(io::IO, bindings::Bindings)
+function show(io::IO, bindings::Bindings)
     rustimpls = []
     names = []
 
@@ -111,8 +113,8 @@ function Base.show(io::IO, bindings::Bindings)
     print(io, join(rustimpls, "\n\n"))
 end
 
-function Base.write(io::IO, bindings::Bindings)
-    rustimpls = []
+function write(io::IO, bindings::Bindings)
+    rustimpls = ["use jlrs::prelude::*;"]
     names = []
 
     for name in keys(bindings.bindings)
@@ -142,7 +144,7 @@ function insertbuiltins!(bindings::Dict{Type,Binding})::Nothing
     bindings[Float64] = BuiltinBinding("f64", [], false, false)
     bindings[Bool] = BuiltinBinding("bool", [], false, false)
     bindings[Char] = BuiltinBinding("char", [], false, false)
-    
+
     bindings[Any] = BuiltinBinding("::jlrs::value::Value", [], true, true)
     bindings[basetype(Array)] = BuiltinBinding("::jlrs::value::array::Array", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
     bindings[Core.CodeInstance] = BuiltinBinding("::jlrs::value::code_instance::CodeInstance", [], true, false)
@@ -174,7 +176,7 @@ function toposort!(data::Dict{DataType,Set{DataType}})::Vector{Type}
     for item in setdiff(reduce(∪, values(data)), keys(data))
         data[item] = Set()
     end
-    
+
     rst = Vector()
     while true
         ordered = Set(item for (item, dep) in data if isempty(dep))
@@ -182,14 +184,14 @@ function toposort!(data::Dict{DataType,Set{DataType}})::Vector{Type}
         append!(rst, ordered)
         data = Dict(item => setdiff(dep, ordered) for (item, dep) in data if item ∉ ordered)
     end
-    
+
     @assert isempty(data) "a cyclic dependency exists amongst $(keys(data))"
     rst
 end
 
-function partialtype(type::UnionAll)::DataType 
+function partialtype(type::UnionAll)::DataType
     t = type
-        
+
     while t.body isa UnionAll
         t = t.body
     end
@@ -197,7 +199,7 @@ function partialtype(type::UnionAll)::DataType
     return t.body
 end
 
-function partialtype(type::DataType)::DataType 
+function partialtype(type::DataType)::DataType
     return type
 end
 
@@ -218,7 +220,7 @@ const BUILTINS = begin
     d
 end
 
-function isnonparametric(type::Union)
+function isnonparametric(type::Union)::Bool
     for utype in Base.uniontypes(type)
         if utype isa DataType
             if utype.hasfreetypevars
@@ -234,13 +236,15 @@ function isnonparametric(type::Union)
     true
 end
 
-function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, type::DataType)
+function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, type::DataType)::Nothing
     for ttype in type.types
         extractdeps!(acc, ttype)
     end
+
+    nothing
 end
 
-function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, type::DataType)
+function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, type::DataType)::Nothing
     for ttype in type.types
         if ttype isa DataType
             if ttype <: Tuple
@@ -258,22 +262,24 @@ function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, typ
             extractdeps!(acc, ttype)
         end
     end
+
+    nothing
 end
 
-function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)
+function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
     if type isa DataType
         if type <: Tuple
             return extracttupledeps!(acc, type)
         elseif type.abstract
             return
         end
-        
+
         partial = partialtype(type)
         base = basetype(type)
-        
+
         if !(base in keys(acc)) && !(base in keys(BUILTINS) )
             acc[base] = Set()
-            
+
             for btype in base.types
                 if btype isa DataType
                     if btype <: Tuple
@@ -317,16 +323,18 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)
             if uniontype isa TypeVar
                 error("Unions with type parameters are not supported")
             end
-    
+
             extractdeps!(acc, uniontype)
         end
     end
+
+    nothing
 end
 
 function extractparams(ty::Type, bindings::Dict{Type,Binding})::Set{TypeVar}
     out = Set()
     if ty <: Tuple
-        for elty in ty.parameters 
+        for elty in ty.parameters
             union!(out, extractparams(elty, bindings))
         end
 
@@ -370,7 +378,7 @@ function concretetuplefield(tuple::Type, bindings::Dict{Type,Binding})::TupleBin
     for ty in tuple.types
         fieldbinding = if ty isa DataType
             if ty.isinlinealloc
-                if ty <: Tuple 
+                if ty <: Tuple
                     b = concretetuplefield(ty, bindings)
                     framelifetime |= b.framelifetime
                     datalifetime |= b.datalifetime
@@ -392,7 +400,7 @@ function concretetuplefield(tuple::Type, bindings::Dict{Type,Binding})::TupleBin
                 else
                     framelifetime = true
                     datalifetime = true
-                    TupleField(bindings[Any], [], true, true)    
+                    TupleField(bindings[Any], [], true, true)
                 end
             else
                 framelifetime = true
@@ -410,13 +418,13 @@ function concretetuplefield(tuple::Type, bindings::Dict{Type,Binding})::TupleBin
 end
 
 
-function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings::Dict{Type,Binding})
+function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings::Dict{Type,Binding})::StructField
     if fieldtype isa TypeVar
         StructField(fieldname, string(fieldname), GenericBinding(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false)
     elseif fieldtype isa UnionAll
         bt = basetype(fieldtype)
-        
-        if bt isa Union 
+
+        if bt isa Union
             error("Unions with type parameters are not supported")
         elseif bt.name.name == :Array
             fieldbinding = bindings[bt]
@@ -462,12 +470,12 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings
 end
 
 function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
-    bt = basetype(type) 
+    bt = basetype(type)
 
     if bt in keys(bindings) return end
-    if bt.abstract 
+    if bt.abstract
         bindings[bt] = bindings[Any]
-        return 
+        return
     end
 
     fields = []
@@ -487,7 +495,7 @@ function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
     nothing
 end
 
-function haslifetimes(ty::Type, bindings::Dict{Type,Main.JlrsReflect.Binding})
+function haslifetimes(ty::Type, bindings::Dict{Type,JlrsReflect.Binding})::Tuple{Bool,Bool}
     framelifetime = false
 
     if ty <: Tuple
@@ -506,13 +514,13 @@ function haslifetimes(ty::Type, bindings::Dict{Type,Main.JlrsReflect.Binding})
     else
         bt = basetype(ty)
         binding = bindings[bt]
-        
+
         if binding.datalifetime
             return (true, true)
         end
-        
+
         framelifetime |= binding.framelifetime
-        
+
         if binding isa StructBinding
             for param in ty.parameters
                 if param isa Type
@@ -530,7 +538,7 @@ function haslifetimes(ty::Type, bindings::Dict{Type,Main.JlrsReflect.Binding})
     (framelifetime, false)
 end
 
-function setparamlifetimes!(bindings::Dict{Type,Main.JlrsReflect.Binding})
+function setparamlifetimes!(bindings::Dict{Type,JlrsReflect.Binding})::Nothing
     for (ty, binding) in bindings
         if binding isa StructBinding
             framelifetime = binding.framelifetime
@@ -553,7 +561,7 @@ function setparamlifetimes!(bindings::Dict{Type,Main.JlrsReflect.Binding})
                         framelifetime |= framelt
                     end
                 end
-                
+
                 if binding.datalifetime
                     break
                 end
@@ -563,20 +571,32 @@ function setparamlifetimes!(bindings::Dict{Type,Main.JlrsReflect.Binding})
             binding.datalifetime = datalifetime
         end
     end
+
+    nothing
 end
 
 """
     reflect(types::Vector{<:Type})::Bindings
 
-Generate Rust mappings for all types in `types` and their dependencies. The only requirement is 
+Generate Rust mappings for all types in `types` and their dependencies. The only requirement is
 that these types must not contain any union or tuple fields that depend on a free type parameter.
-The mappings will derive `JuliaStruct`, and `IntoJulia` if it's a bits type.
+Bindings are generated for the most general case by erasing the contents of all provided
+parameters, so you can't avoid this restriction by explicitly trying to avoid this restriction by
+providing a more qualified type. The only effect qualifying types has, is that bindings to these
+types will also be generated. The mappings will derive `JuliaStruct`, and `IntoJulia` if it's a
+bits type (with no free type parameters).
 
-The result of this method can be written to a file, its contents will be a valid Rust module.
+The result of this method can be written to a file, its contents will normally be a valid Rust
+module.
 
-When you use these mappings with jlrs, these types must be available with the same path. For 
-example, if you generate bindings for `Main.Bar.Baz`, they must be available on that path and not
-some other path like `Main.Foo.Bar.Baz`. 
+When you use these mappings with jlrs, these types must be available with the same path. For
+example, if you generate bindings for `Main.Bar.Baz`, this type must be available through that
+exact path and not some other path like `Main.Foo.Bar.Baz`.
+
+Bits unions are turned into three fields for size and alignment requirement purposes. Besides a
+field with the same name that contains the raw data, a private field that enforces the proper
+alignment named `_{fieldname}_align` and a public field named `{fieldname}_flag` that contains the
+flag that indicates the active variant will be generated.
 
 # Example
 ```jldoctest
@@ -663,7 +683,7 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
     end
 
     if length(generics) > 0
-        wh = if length(wheres) > 0 
+        wh = if length(wheres) > 0
             string("\nwhere\n", join(wheres), "\n")
         else
             " "
@@ -786,7 +806,7 @@ end
 function strstructfield(binding::StructBinding, field::StructField, bindings::Dict{Type,Binding})::String
     if field.fieldtype isa BitsUnionBinding
         align_field_name = string("_", field.rsname, "_align")
-        flag_field_name = string("_", field.rsname, "_flag")
+        flag_field_name = string(field.rsname, "_flag")
 
         sz = 0
         al = 0
@@ -810,12 +830,12 @@ function strstructfield(binding::StructBinding, field::StructField, bindings::Di
         end
 
         string(
-            "    #[jlrs(bits_union_align)]\n", 
+            "    #[jlrs(bits_union_align)]\n",
             "    ", align_field_name, ": ", alignment, ",\n",
-            "    #[jlrs(bits_union)]\n", 
+            "    #[jlrs(bits_union)]\n",
             "    pub ", field.rsname, ": ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; ", sz, "]>,\n",
-            "    #[jlrs(bits_union_flag)]\n", 
-            "    ", flag_field_name, ": u8,",
+            "    #[jlrs(bits_union_flag)]\n",
+            "    pub ", flag_field_name, ": u8,",
         )
     else
         sig = strsignature(binding, field, bindings)
@@ -823,15 +843,15 @@ function strstructfield(binding::StructBinding, field::StructField, bindings::Di
     end
 end
 
-strbinding(binding::BuiltinBinding, bindings) = nothing
+strbinding(::BuiltinBinding, ::Dict{Type,Binding})::Union{Nothing,String} = nothing
 
 function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union{Nothing,String}
     ty = getproperty(binding.typename.module, binding.typename.name)
     isbits = ty isa DataType && !ty.hasfreetypevars && ty.isbitstype && length(ty.types) > 0 ? ", IntoJulia" : ""
 
     parts = [
-        "#[repr(C)]", 
-        string("#[jlrs(julia_type = \"", binding.typename.module, ".", binding.typename.name, "\")]"), 
+        "#[repr(C)]",
+        string("#[jlrs(julia_type = \"", binding.typename.module, ".", binding.typename.name, "\")]"),
         string("#[derive(Copy, Clone, Debug, JuliaStruct", isbits, ")]"),
         string("pub struct ", strstructname(binding), "{")
     ]
@@ -843,10 +863,10 @@ function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union
 end
 
 """
-    renamestruct(bindings::Bindings, type::Type, rename::String)
+    renamestruct!(bindings::Bindings, type::Type, rename::String)
 
 Change a struct's name. This can be useful if the name of a struct results in invalid Rust code or
-causes warnings. 
+causes warnings.
 
 # Example
 ```jldoctest
@@ -856,7 +876,7 @@ julia> struct Foo end;
 
 julia> bindings = reflect([Foo]);
 
-julia> renamestruct(bindings, Foo, "Bar")
+julia> renamestruct!(bindings, Foo, "Bar")
 
 julia> bindings
 #[repr(C)]
@@ -866,19 +886,19 @@ pub struct Bar {
 }
 ```
 """
-function renamestruct(bindings::Bindings, type::Type, rename::String)
+function renamestruct!(bindings::Bindings, type::Type, rename::String)::Nothing
     btype::DataType = basetype(type)
     bindings.bindings[btype].rsname = rename
-    
+
     nothing
 end
 
 """
-    renamestruct(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
-    renamestruct(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String})
+    renamefields!(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
+    renamefields!(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String})
 
-Change some field names of a struct. This can be useful if the filed name name of a struct results
-in invalid Rust code or causes warnings. 
+Change some field names of a struct. This can be useful if the name of a struct results in invalid
+Rust code or causes warnings.
 
 # Example
 ```jldoctest
@@ -890,7 +910,7 @@ end;
 
 julia> bindings = reflect([Food]);
 
-julia> renamefields(bindings, Food, [:🍔 => "burger"])
+julia> renamefields!(bindings, Food, [:🍔 => "burger"])
 
 julia> bindings
 #[repr(C)]
@@ -901,9 +921,9 @@ pub struct Food {
 }
 ```
 """
-function renamefields end
+function renamefields! end
 
-function renamefields(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
+function renamefields!(bindings::Bindings, type::Type, rename::Dict{Symbol,String})::Nothing
     btype::DataType = basetype(type)
     for field in bindings.bindings[btype].fields
         if field.name in keys(rename)
@@ -914,7 +934,7 @@ function renamefields(bindings::Bindings, type::Type, rename::Dict{Symbol,String
     nothing
 end
 
-function renamefields(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String}})
-    renamefields(bindings, type, Dict(rename))
+function renamefields!(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String}})::Nothing
+    renamefields!(bindings, type, Dict(rename))
 end
 end

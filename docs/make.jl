@@ -1,3 +1,2 @@
-include("../src/JlrsReflect.jl")
-using Documenter, .JlrsReflect
+using Documenter, JlrsReflect
 makedocs(sitename="JlrsReflect")

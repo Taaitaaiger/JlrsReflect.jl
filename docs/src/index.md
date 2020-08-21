@@ -1,13 +1,11 @@
 # JlrsReflect.jl Documentation
 
-One of the features of jlrs, a crate that provides bindings to the Julia C API for the Rust programming language, is that it supports mapping a struct from Julia to a Rust struct which lets you access its contents directly. Writing down the correct implementation of these structs in Rust can be challenging, this package can be used to automate the process.
+One of the main features of jlrs is the possibility to easily convert data from Julia to Rust. By default only a few builtin types, like integers, arrays and modules are available, but this can be extended by using the `JuliaStruct` derive macro. One annoying aspect of this macro is that you need to figure out the correct layout first.
 
-Many types are supported, the major exceptions are types with tuple or union fields that depend on a free type parameter. These fields can have very different representations depending on these parameters which makes generating an appropriate mapping impossible. Everything else is fine, though; Types with bits union fields, `UnionAll` fields, type parameters, and "special" types backed by a struct defined in C like `Module` and `Array` are all supported.
-
-There is a single entrypoint, the `reflect` method which takes a `Vector` of `Type`s. Mappings will be generated for all of these types and their dependencies. The result of a call to this method can be written to a .rs-file and used as a module without any tweaking. 
-
-This package is compatible with Julia v1.5 and jlrs v0.6.
+With JlrsReflect.jl you can automatically generate the appropriate bindings for many Julia types if you're using Julia 1.5. This includes types with unions, tuples, and type parameters. Even value types are not a problem because the bindings only contain type parameters that directly affect the layout. If a field contains pointers, featureful wrappers from jlrs with reasonable lifetimes are used. Two things that are not supported are structs with union or tuple fields that depend on a type parameter (eg `struct SomeGenericStruct{T} a::Tuple{Int32, T} end`, `SomeGenericStruct{T} a::Union{Int32, T} end`), and unions used as generic parameters (eg `SomeGenericStruct{Union{A,B}}`).
 
 ```@docs
 reflect
+renamestruct!
+renamefields!
 ```
