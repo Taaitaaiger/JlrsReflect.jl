@@ -37,14 +37,14 @@ end
 @testset "Structs with generic fields" begin
     @test begin
         b = JlrsReflect.reflect([WithGenericT])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithGenericT)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithGenericT")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithGenericT<T>
         where
-            T: ::jlrs::traits::ValidLayout + Copy,
+            T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
         {
             pub a: T,
         }"""
@@ -52,14 +52,14 @@ end
 
     @test begin
         b = JlrsReflect.reflect([WithNestedGenericT])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithNestedGenericT)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithNestedGenericT")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithNestedGenericT<T>
         where
-            T: ::jlrs::traits::ValidLayout + Copy,
+            T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
         {
             pub a: WithGenericT<T>,
         }"""
@@ -67,11 +67,11 @@ end
 
     @test begin
         b = JlrsReflect.reflect([WithSetGeneric])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[WithSetGeneric] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.WithSetGeneric")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct WithSetGeneric {
             pub a: WithGenericT<i64>,
         }"""
@@ -79,11 +79,11 @@ end
 
     @test begin
         b = JlrsReflect.reflect([WithValueType])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithValueType)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithValueType")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithValueType {
             pub a: i64,
         }"""
@@ -91,13 +91,13 @@ end
 
     @test begin
         b = JlrsReflect.reflect([WithGenericUnionAll])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[WithGenericUnionAll] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithGenericUnionAll")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithGenericUnionAll<'frame, 'data> {
-            pub a: ::jlrs::value::Value<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -107,37 +107,37 @@ end
 
     @test begin
         b = JlrsReflect.reflect([WithSetGenericTuple])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[WithSetGenericTuple] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.WithSetGenericTuple")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct WithSetGenericTuple {
-            pub a: ::jlrs::value::tuple::Tuple1<WithGenericT<i64>>,
+            pub a: ::jlrs::wrappers::inline::tuple::Tuple1<WithGenericT<i64>>,
         }"""
     end
 
     @test begin
         b = JlrsReflect.reflect([WithPropagatedLifetime])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[WithPropagatedLifetime] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetime")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithPropagatedLifetime<'frame> {
-            pub a: WithGenericT<::jlrs::value::module::Module<'frame>>,
+            pub a: WithGenericT<::jlrs::wrappers::ptr::ModuleRef<'frame>>,
         }"""
     end
 
     @test begin
         b = JlrsReflect.reflect([WithPropagatedLifetimes])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[WithPropagatedLifetimes] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetimes")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct WithPropagatedLifetimes<'frame, 'data> {
-            pub a: WithGenericT<::jlrs::value::tuple::Tuple2<i32, WithGenericT<::jlrs::value::array::Array<'frame, 'data>>>>,
+            pub a: WithGenericT<::jlrs::wrappers::inline::tuple::Tuple2<i32, WithGenericT<::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>>>>,
         }"""
     end
 end

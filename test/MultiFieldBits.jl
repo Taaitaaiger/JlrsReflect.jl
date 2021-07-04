@@ -12,26 +12,26 @@ end
 @testset "Multi-field bits types" begin
     @test begin
         b = JlrsReflect.reflect([BitsIntBool])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsIntBool] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsIntBool")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct BitsIntBool {
             pub a: i64,
-            pub b: bool,
+            pub b: ::jlrs::wrappers::inline::bool::Bool,
         }"""
     end
 
     @test begin
         b = JlrsReflect.reflect([BitsCharFloat32Float64])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsCharFloat32Float64] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsCharFloat32Float64")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct BitsCharFloat32Float64 {
-            pub a: char,
+            pub a: ::jlrs::wrappers::inline::char::Char,
             pub b: f32,
             pub c: f64,
         }"""

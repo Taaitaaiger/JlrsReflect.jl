@@ -4,7 +4,7 @@ export reflect, renamestruct!, renamefields!
 
 import Base: show, getindex, write
 
-abstract type Binding end
+abstract type Wrapper end
 
 struct StructParameter
     name::Symbol
@@ -16,28 +16,29 @@ struct TypeParameter
     value
 end
 
-struct GenericBinding <: Binding
+struct GenericWrapper <: Wrapper
     name::Symbol
 end
 
 mutable struct StructField
     name::Symbol
     rsname::String
-    fieldtype::Binding
+    fieldtype::Wrapper
     typeparams::Vector{TypeParameter}
     referenced::Set{TypeVar}
     framelifetime::Bool
     datalifetime::Bool
 end
 
-struct BitsUnionBinding <: Binding
+struct BitsUnionWrapper <: Wrapper
     union_of::Union
     typeparams::Vector{StructParameter}
     framelifetime::Bool
     datalifetime::Bool
+    BitsUnionWrapper(union_of::Union) = new(union_of, [], false, false)
 end
 
-mutable struct StructBinding <: Binding
+mutable struct StructWrapper <: Wrapper
     name::Symbol
     typename::Core.TypeName
     rsname::String
@@ -48,63 +49,62 @@ mutable struct StructBinding <: Binding
 end
 
 struct TupleField
-    fieldtype::Binding
+    fieldtype::Wrapper
     typeparams::Vector{TypeParameter}
     framelifetime::Bool
     datalifetime::Bool
 end
 
-struct TupleBinding <: Binding
+struct TupleWrapper <: Wrapper
     rsname::String
     fields::Vector{TupleField}
     framelifetime::Bool
     datalifetime::Bool
-    TupleBinding(fields::Vector{TupleField}, framelifetime::Bool, datalifetime::Bool) = new(string("::jlrs::value::tuple::Tuple", length(fields)), fields, framelifetime, datalifetime)
+    TupleWrapper(fields::Vector{TupleField}, framelifetime::Bool, datalifetime::Bool) = new(string("::jlrs::wrappers::inline::tuple::Tuple", length(fields)), fields, framelifetime, datalifetime)
 end
 
-struct BuiltinBinding <: Binding
+struct BuiltinWrapper <: Wrapper
     rsname::String
     typeparams::Vector{StructParameter}
     framelifetime::Bool
     datalifetime::Bool
 end
 
-struct Bindings
-    bindings::Dict{Type,Binding}
+struct Wrappers
+    dict::Dict{Type,Wrapper}
 end
 
-struct StringBindings
-    bindings::Dict{Type,String}
+struct StringWrappers
+    dict::Dict{Type,String}
 end
 
-function StringBindings(bindings::Bindings)
-    strbindings = Dict{Type,String}()
-    names = []
+function StringWrappers(wrappers::Wrappers)
+    strwrappers = Dict{Type,String}()
 
-    for name in keys(bindings.bindings)
-        rustimpl = strbinding(bindings.bindings[name], bindings.bindings)
+    for name in keys(wrappers.dict)
+        rustimpl = strwrapper(wrappers.dict[name], wrappers.dict)
         if rustimpl !== nothing
-            strbindings[name] = rustimpl
+            strwrappers[name] = rustimpl
         end
     end
 
-    StringBindings(strbindings)
+    StringWrappers(strwrappers)
 end
 
-function getindex(sb::StringBindings, els...)
-    sb.bindings[els...]
+function getindex(sb::StringWrappers, els...)
+    sb.dict[els...]
 end
 
-function show(io::IO, bindings::Bindings)
+function show(io::IO, wrappers::Wrappers)
     rustimpls = []
     names = []
 
-    for name in keys(bindings.bindings)
+    for name in keys(wrappers.dict)
         push!(names, name)
     end
 
     for name in sort(names, lt=(a, b) -> string(a) < string(b))
-        rustimpl = strbinding(bindings.bindings[name], bindings.bindings)
+        rustimpl = strwrapper(wrappers.dict[name], wrappers.dict)
         if rustimpl !== nothing
             push!(rustimpls, rustimpl)
         end
@@ -113,16 +113,16 @@ function show(io::IO, bindings::Bindings)
     print(io, join(rustimpls, "\n\n"))
 end
 
-function write(io::IO, bindings::Bindings)
+function write(io::IO, wrappers::Wrappers)
     rustimpls = ["use jlrs::prelude::*;"]
     names = []
 
-    for name in keys(bindings.bindings)
+    for name in keys(wrappers.dict)
         push!(names, name)
     end
 
     for name in sort(names, lt=(a, b) -> string(a) < string(b))
-        rustimpl = strbinding(bindings.bindings[name], bindings.bindings)
+        rustimpl = strwrapper(wrappers.dict[name], wrappers.dict)
         if rustimpl !== nothing
             push!(rustimpls, rustimpl)
         end
@@ -131,39 +131,44 @@ function write(io::IO, bindings::Bindings)
     write(io, join(rustimpls, "\n\n"), "\n")
 end
 
-function insertbuiltins!(bindings::Dict{Type,Binding})::Nothing
-    bindings[UInt8] = BuiltinBinding("u8", [], false, false)
-    bindings[UInt16] = BuiltinBinding("u16", [], false, false)
-    bindings[UInt32] = BuiltinBinding("u32", [], false, false)
-    bindings[UInt64] = BuiltinBinding("u64", [], false, false)
-    bindings[Int8] = BuiltinBinding("i8", [], false, false)
-    bindings[Int16] = BuiltinBinding("i16", [], false, false)
-    bindings[Int32] = BuiltinBinding("i32", [], false, false)
-    bindings[Int64] = BuiltinBinding("i64", [], false, false)
-    bindings[Float32] = BuiltinBinding("f32", [], false, false)
-    bindings[Float64] = BuiltinBinding("f64", [], false, false)
-    bindings[Bool] = BuiltinBinding("bool", [], false, false)
-    bindings[Char] = BuiltinBinding("char", [], false, false)
+function insertbuiltins!(wrappers::Dict{Type,Wrapper})::Nothing
+    wrappers[UInt8] = BuiltinWrapper("u8", [], false, false)
+    wrappers[UInt16] = BuiltinWrapper("u16", [], false, false)
+    wrappers[UInt32] = BuiltinWrapper("u32", [], false, false)
+    wrappers[UInt64] = BuiltinWrapper("u64", [], false, false)
+    wrappers[Int8] = BuiltinWrapper("i8", [], false, false)
+    wrappers[Int16] = BuiltinWrapper("i16", [], false, false)
+    wrappers[Int32] = BuiltinWrapper("i32", [], false, false)
+    wrappers[Int64] = BuiltinWrapper("i64", [], false, false)
+    wrappers[Float32] = BuiltinWrapper("f32", [], false, false)
+    wrappers[Float64] = BuiltinWrapper("f64", [], false, false)
+    wrappers[Bool] = BuiltinWrapper("::jlrs::wrappers::inline::bool::Bool", [], false, false)
+    wrappers[Char] = BuiltinWrapper("::jlrs::wrappers::inline::char::Char", [], false, false)
+    wrappers[Core.SSAValue] = BuiltinWrapper("::jlrs::wrappers::inline::ssa_value::SSAValue", [], false, false)
+    wrappers[Union{}] = BuiltinWrapper("::jlrs::wrappers::inline::union::EmptyUnion", [], false, false)
 
-    bindings[Any] = BuiltinBinding("::jlrs::value::Value", [], true, true)
-    bindings[basetype(Array)] = BuiltinBinding("::jlrs::value::array::Array", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
-    bindings[Core.CodeInstance] = BuiltinBinding("::jlrs::value::code_instance::CodeInstance", [], true, false)
-    bindings[DataType] = BuiltinBinding("::jlrs::value::datatype::DataType", [], true, false)
-    bindings[Expr] = BuiltinBinding("::jlrs::value::expr::Expr", [], true, false)
-    bindings[String] = BuiltinBinding("::jlrs::value::string::JuliaString", [], true, false)
-    bindings[Method] = BuiltinBinding("::jlrs::value::method::Method", [], true, false)
-    bindings[Core.MethodInstance] = BuiltinBinding("::jlrs::value::method_instance::MethodInstance", [], true, false)
-    bindings[Core.MethodTable] = BuiltinBinding("::jlrs::value::method_table::MethodTable", [], true, false)
-    bindings[Module] = BuiltinBinding("::jlrs::value::module::Module", [], true, false)
-    bindings[Core.SimpleVector] = BuiltinBinding("::jlrs::value::simple_vector::SimpleVector", [], true, false)
-    bindings[Symbol] = BuiltinBinding("::jlrs::value::symbol::Symbol", [], true, false)
-    bindings[Task] = BuiltinBinding("::jlrs::value::task::Task", [], true, false)
-    bindings[Core.TypeName] = BuiltinBinding("::jlrs::value::type_name::TypeName", [], true, false)
-    bindings[TypeVar] = BuiltinBinding("::jlrs::value::type_var::TypeVar", [], true, false)
-    bindings[Core.TypeMapEntry] = BuiltinBinding("::jlrs::value::typemap_entry::TypeMapEntry", [], true, false)
-    bindings[Core.TypeMapLevel] = BuiltinBinding("::jlrs::value::typemap_level::TypeMapLevel", [], true, false)
-    bindings[Union] = BuiltinBinding("::jlrs::value::union::Union", [], true, false)
-    bindings[UnionAll] = BuiltinBinding("::jlrs::value::union_all::UnionAll", [], true, false)
+    wrappers[Any] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+    wrappers[basetype(Array)] = BuiltinWrapper("::jlrs::wrappers::ptr::ArrayRef", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
+    wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::CodeInstanceRef", [], true, false)
+    wrappers[DataType] = BuiltinWrapper("::jlrs::wrappers::ptr::DataTypeRef", [], true, false)
+    wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::ExprRef", [], true, false)
+    wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
+    wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodInstanceRef", [], true, false)
+    wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodMatchRef", [], true, false)
+    wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodTableRef", [], true, false)
+    wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
+    wrappers[Module] = BuiltinWrapper("::jlrs::wrappers::ptr::ModuleRef", [], true, false)
+    wrappers[Core.SimpleVector] = BuiltinWrapper("::jlrs::wrappers::ptr::SimpleVectorRef", [], true, false)
+    wrappers[String] = BuiltinWrapper("::jlrs::wrappers::ptr::StringRef", [], true, false)
+    wrappers[Symbol] = BuiltinWrapper("::jlrs::wrappers::ptr::SymbolRef", [], true, false)
+    wrappers[Task] = BuiltinWrapper("::jlrs::wrappers::ptr::TaskRef", [], true, false)
+    wrappers[Core.TypeName] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeNameRef", [], true, false)
+    wrappers[TypeVar] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeVarRef", [], true, false)
+    wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapEntryRef", [], true, false)
+    wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapLevelRef", [], true, false)
+    wrappers[Union] = BuiltinWrapper("::jlrs::wrappers::ptr::UnionRef", [], true, false)
+    wrappers[UnionAll] = BuiltinWrapper("::jlrs::wrappers::ptr::UnionAllRef", [], true, false)
+    wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::WeakRefRef", [], true, false)
 
     nothing
 end
@@ -215,7 +220,7 @@ function basetype(type::UnionAll)::DataType
 end
 
 const BUILTINS = begin
-    d = Dict{Type,Binding}()
+    d = Dict{Type,Wrapper}()
     insertbuiltins!(d)
     d
 end
@@ -223,7 +228,7 @@ end
 function isnonparametric(type::Union)::Bool
     for utype in Base.uniontypes(type)
         if utype isa DataType
-            if utype.hasfreetypevars
+            if findfirst(utype.parameters) do p p isa TypeVar end !== nothing
                 return false
             end
 
@@ -248,7 +253,7 @@ function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, typ
     for ttype in type.types
         if ttype isa DataType
             if ttype <: Tuple
-                if !ttype.isconcretetype
+                if !isconcretetype(ttype)
                     extracttupledeps!(acc, ttype)
                 else
                     extracttupledeps!(acc, key, ttype)
@@ -270,7 +275,7 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
     if type isa DataType
         if type <: Tuple
             return extracttupledeps!(acc, type)
-        elseif type.abstract
+        elseif isabstracttype(type)
             return
         end
 
@@ -283,9 +288,9 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
             for btype in base.types
                 if btype isa DataType
                     if btype <: Tuple
-                        if btype.hasfreetypevars
+                        if findfirst(btype.parameters) do p p isa TypeVar end !== nothing
                             error("Tuple fields with type parameters are not supported")
-                        elseif !btype.isconcretetype
+                        elseif !isconcretetype(btype)
                             extracttupledeps!(acc, btype)
                         else
                             extracttupledeps!(acc, type, btype)
@@ -331,38 +336,38 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
     nothing
 end
 
-function extractparams(ty::Type, bindings::Dict{Type,Binding})::Set{TypeVar}
+function extractparams(ty::Type, wrappers::Dict{Type,Wrapper})::Set{TypeVar}
     out = Set()
     if ty <: Tuple
         for elty in ty.parameters
-            union!(out, extractparams(elty, bindings))
+            union!(out, extractparams(elty, wrappers))
         end
 
         return out
     elseif ty isa Union
         return out
-    elseif ty.abstract
+    elseif isabstracttype(ty)
         return out
     end
 
     partial = partialtype(ty)
     base = basetype(ty)
 
-    binding = bindings[base]
+    wrapper = wrappers[base]
 
     if !hasproperty(partial, :parameters)
         return out
     end
 
-    for (name, param) in zip(binding.typeparams, partial.parameters)
+    for (name, param) in zip(wrapper.typeparams, partial.parameters)
         if !name.elide
             if param isa TypeVar
-                idx = findfirst(t -> t.name == name.name, binding.typeparams)
+                idx = findfirst(t -> t.name == name.name, wrapper.typeparams)
                 if idx !== nothing
                     push!(out, param)
                 end
             elseif param isa Type
-                union!(out, extractparams(param, bindings))
+                union!(out, extractparams(param, wrappers))
             end
         end
     end
@@ -370,111 +375,111 @@ function extractparams(ty::Type, bindings::Dict{Type,Binding})::Set{TypeVar}
     out
 end
 
-function concretetuplefield(tuple::Type, bindings::Dict{Type,Binding})::TupleBinding
+function concretetuplefield(tuple::Type, wrappers::Dict{Type,Wrapper})::TupleWrapper
     framelifetime = false
     datalifetime = false
-    fieldbindings::Vector{TupleField} = []
+    fieldwrappers::Vector{TupleField} = []
 
     for ty in tuple.types
-        fieldbinding = if ty isa DataType
-            if ty.isinlinealloc
+        fieldwrapper = if ty isa DataType
+            if Base.uniontype_layout(ty)[1]
                 if ty <: Tuple
-                    b = concretetuplefield(ty, bindings)
+                    b = concretetuplefield(ty, wrappers)
                     framelifetime |= b.framelifetime
                     datalifetime |= b.datalifetime
                     TupleField(b, [], b.framelifetime, b.datalifetime)
                 else
                     bty = basetype(ty)
-                    b = bindings[bty]
+                    b = wrappers[bty]
                     tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bty.parameters, ty.parameters))
                     framelifetime |= b.framelifetime
                     datalifetime |= b.datalifetime
                     TupleField(b, tparams, b.framelifetime, b.datalifetime)
                 end
-            elseif ty in keys(bindings)
-                b = bindings[ty]
-                if b isa BuiltinBinding
+            elseif ty in keys(wrappers)
+                b = wrappers[ty]
+                if b isa BuiltinWrapper
                     framelifetime |= b.framelifetime
                     datalifetime |= b.datalifetime
                     TupleField(b, [], b.framelifetime, b.datalifetime)
                 else
                     framelifetime = true
                     datalifetime = true
-                    TupleField(bindings[Any], [], true, true)
+                    TupleField(wrappers[Any], [], true, true)
                 end
             else
                 framelifetime = true
                 datalifetime = true
-                TupleField(bindings[Any], [], true, true)
+                TupleField(wrappers[Any], [], true, true)
             end
         else
             error("Invalid type")
         end
 
-        push!(fieldbindings, fieldbinding)
+        push!(fieldwrappers, fieldwrapper)
     end
 
-    TupleBinding(fieldbindings, framelifetime, datalifetime)
+    TupleWrapper(fieldwrappers, framelifetime, datalifetime)
 end
 
 
-function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, bindings::Dict{Type,Binding})::StructField
+function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, wrappers::Dict{Type,Wrapper})::StructField
     if fieldtype isa TypeVar
-        StructField(fieldname, string(fieldname), GenericBinding(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false)
+        StructField(fieldname, string(fieldname), GenericWrapper(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false)
     elseif fieldtype isa UnionAll
         bt = basetype(fieldtype)
 
         if bt isa Union
             error("Unions with type parameters are not supported")
         elseif bt.name.name == :Array
-            fieldbinding = bindings[bt]
+            fieldwrapper = wrappers[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, bt.parameters))
-            references = extractparams(bt, bindings)
-            StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
+            references = extractparams(bt, wrappers)
+            StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime)
         else
-            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
         end
     elseif fieldtype isa Union
         if Base.isbitsunion(fieldtype)
-            StructField(fieldname, string(fieldname), BitsUnionBinding(fieldtype, [], false, false), [], Set(), false, false)
+            StructField(fieldname, string(fieldname), BitsUnionWrapper(fieldtype), [], Set(), false, false)
         else
-            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
         end
     elseif fieldtype == Union{}
-        StructField(fieldname, string(fieldname), bindings[Union{}], [], Set(), false, false)
+        StructField(fieldname, string(fieldname), wrappers[Union{}], [], Set(), false, false)
     elseif fieldtype <: Tuple
-        params = extractparams(fieldtype, bindings)
+        params = extractparams(fieldtype, wrappers)
         if length(params) > 0
             error("Tuples with type parameters are not supported")
-        elseif fieldtype.isconcretetype
-            binding = concretetuplefield(fieldtype, bindings)
-            StructField(fieldname, string(fieldname), binding, [], Set(), binding.framelifetime, binding.datalifetime)
+        elseif isconcretetype(fieldtype)
+            wrapper = concretetuplefield(fieldtype, wrappers)
+            StructField(fieldname, string(fieldname), wrapper, [], Set(), wrapper.framelifetime, wrapper.datalifetime)
         else
-            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
         end
     elseif fieldtype isa DataType
         bt = basetype(fieldtype)
-        if bt in keys(bindings)
-            fieldbinding = bindings[bt]
+        if bt in keys(wrappers)
+            fieldwrapper = wrappers[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
-            references = extractparams(fieldtype, bindings)
-            StructField(fieldname, string(fieldname), fieldbinding, tparams, references, fieldbinding.framelifetime, fieldbinding.datalifetime)
-        elseif !fieldtype.isinlinealloc
-            StructField(fieldname, string(fieldname), bindings[Any], [], Set(), true, true)
+            references = extractparams(fieldtype, wrappers)
+            StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime)
+        elseif Base.uniontype_layout(fieldtype)[1]
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
         else
-            error("Cannot create field binding")
+            error("Cannot create field wrapper")
         end
     else
         error("Unknown field type")
     end
 end
 
-function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
+function createwrapper!(wrappers::Dict{Type,Wrapper}, type::Type)::Nothing
     bt = basetype(type)
 
-    if bt in keys(bindings) return end
-    if bt.abstract
-        bindings[bt] = bindings[Any]
+    if bt in keys(wrappers) return end
+    if isabstracttype(bt)
+        wrappers[bt] = wrappers[Any]
         return
     end
 
@@ -482,8 +487,8 @@ function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
     framelifetime = false
     datalifetime = false
     typevars = Set()
-    for (fieldname, fieldtype) in zip(fieldnames(bt), fieldtypes(bt))
-        field = structfield(fieldname, fieldtype, bindings)
+    for (name, ty) in zip(fieldnames(bt), fieldtypes(bt))
+        field = structfield(name, ty, wrappers)
         framelifetime |= field.framelifetime
         datalifetime |= field.datalifetime
         union!(typevars, field.referenced)
@@ -491,17 +496,17 @@ function createbinding!(bindings::Dict{Type,Binding}, type::Type)::Nothing
     end
 
     params = map(a -> StructParameter(a.name, !(a in typevars)), bt.parameters)
-    bindings[bt] = StructBinding(type.name.name, type.name, string(type.name.name), fields, params, framelifetime, datalifetime)
+    wrappers[bt] = StructWrapper(type.name.name, type.name, string(type.name.name), fields, params, framelifetime, datalifetime)
     nothing
 end
 
-function haslifetimes(ty::Type, bindings::Dict{Type,JlrsReflect.Binding})::Tuple{Bool,Bool}
+function haslifetimes(ty::Type, wrappers::Dict{Type,JlrsReflect.Wrapper})::Tuple{Bool,Bool}
     framelifetime = false
 
     if ty <: Tuple
-        if ty.isconcretetype
+        if isconcretetype(ty)
             for fty in ty.types
-                framelt, datalt = haslifetimes(fty, bindings)
+                framelt, datalt = haslifetimes(fty, wrappers)
                 if datalt
                     return (true, true)
                 end
@@ -513,18 +518,18 @@ function haslifetimes(ty::Type, bindings::Dict{Type,JlrsReflect.Binding})::Tuple
         end
     else
         bt = basetype(ty)
-        binding = bindings[bt]
+        wrapper = wrappers[bt]
 
-        if binding.datalifetime
+        if wrapper.datalifetime
             return (true, true)
         end
 
-        framelifetime |= binding.framelifetime
+        framelifetime |= wrapper.framelifetime
 
-        if binding isa StructBinding
+        if wrapper isa StructWrapper
             for param in ty.parameters
                 if param isa Type
-                    framelt, datalt = haslifetimes(param, bindings)
+                    framelt, datalt = haslifetimes(param, wrappers)
                     if datalt
                         return (true, true)
                     end
@@ -538,20 +543,20 @@ function haslifetimes(ty::Type, bindings::Dict{Type,JlrsReflect.Binding})::Tuple
     (framelifetime, false)
 end
 
-function setparamlifetimes!(bindings::Dict{Type,JlrsReflect.Binding})::Nothing
-    for (ty, binding) in bindings
-        if binding isa StructBinding
-            framelifetime = binding.framelifetime
-            datalifetime = binding.datalifetime
+function setparamlifetimes!(wrappers::Dict{Type,JlrsReflect.Wrapper})::Nothing
+    for (ty, wrapper) in wrappers
+        if wrapper isa StructWrapper
+            framelifetime = wrapper.framelifetime
+            datalifetime = wrapper.datalifetime
 
             if datalifetime
                 continue
             end
 
-            for field in binding.fields
+            for field in wrapper.fields
                 for param in field.typeparams
                     if param.value !== nothing && !(param.value isa TypeVar)
-                        framelt, datalt = haslifetimes(param.value, bindings)
+                        framelt, datalt = haslifetimes(param.value, wrappers)
                         if datalt
                             framelifetime = true
                             datalifetime = true
@@ -562,13 +567,13 @@ function setparamlifetimes!(bindings::Dict{Type,JlrsReflect.Binding})::Nothing
                     end
                 end
 
-                if binding.datalifetime
+                if wrapper.datalifetime
                     break
                 end
             end
 
-            binding.framelifetime = framelifetime
-            binding.datalifetime = datalifetime
+            wrapper.framelifetime = framelifetime
+            wrapper.datalifetime = datalifetime
         end
     end
 
@@ -576,27 +581,22 @@ function setparamlifetimes!(bindings::Dict{Type,JlrsReflect.Binding})::Nothing
 end
 
 """
-    reflect(types::Vector{<:Type})::Bindings
+    reflect(types::Vector{<:Type})::Wrappers
 
-Generate Rust mappings for all types in `types` and their dependencies. The only requirement is
-that these types must not contain any union or tuple fields that depend on a free type parameter.
-Bindings are generated for the most general case by erasing the contents of all provided
-parameters, so you can't avoid this restriction by explicitly trying to avoid this restriction by
-providing a more qualified type. The only effect qualifying types has, is that bindings to these
-types will also be generated. The mappings will derive `JuliaStruct`, and `IntoJulia` if it's a
-bits type (with no free type parameters).
+Generate Rust wrappers for all types in `types` and their dependencies. The only requirement is
+that these types must not contain any union or tuple fields that depend on a type parameter.
+Wrappers are generated for the most general case by erasing the contents of all provided type
+parameters, so you can't avoid this restriction by explicitly providing a more qualified type.
+The only effect qualifying types has, is that wrappers for the used parameters will also be
+generated. The wrappers will derive `Unbox` and `ValidLayout`, and `IntoJulia` if it's a
+bits-type with no type parameters.
 
-The result of this method can be written to a file, its contents will normally be a valid Rust
+The result of this function can be written to a file, its contents will normally be a valid Rust
 module.
 
-When you use these mappings with jlrs, these types must be available with the same path. For
-example, if you generate bindings for `Main.Bar.Baz`, this type must be available through that
+When you use these wrappers with jlrs, these types must be available with the same path. For
+example, if you generate wrappers for `Main.Bar.Baz`, this type must be available through that
 exact path and not some other path like `Main.Foo.Bar.Baz`.
-
-Bits unions are turned into three fields for size and alignment requirement purposes. Besides a
-field with the same name that contains the raw data, a private field that enforces the proper
-alignment named `_{fieldname}_align` and a public field named `{fieldname}_flag` that contains the
-flag that indicates the active variant will be generated.
 
 # Example
 ```jldoctest
@@ -604,81 +604,81 @@ julia> using JlrsReflect
 
 julia> reflect([StackTraces.StackFrame])
 #[repr(C)]
+#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
 #[jlrs(julia_type = "Base.StackTraces.StackFrame")]
-#[derive(Copy, Clone, Debug, JuliaStruct)]
 pub struct StackFrame<'frame, 'data> {
-    pub func: ::jlrs::value::symbol::Symbol<'frame>,
-    pub file: ::jlrs::value::symbol::Symbol<'frame>,
+    pub func: ::jlrs::wrappers::ptr::SymbolRef<'frame>,
+    pub file: ::jlrs::wrappers::ptr::SymbolRef<'frame>,
     pub line: i64,
-    pub linfo: ::jlrs::value::Value<'frame, 'data>,
-    pub from_c: bool,
-    pub inlined: bool,
+    pub linfo: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub from_c: ::jlrs::wrappers::inline::bool::Bool,
+    pub inlined: ::jlrs::wrappers::inline::bool::Bool,
     pub pointer: u64,
 }
 
 #[repr(C)]
+#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
 #[jlrs(julia_type = "Core.CodeInfo")]
-#[derive(Copy, Clone, Debug, JuliaStruct)]
 pub struct CodeInfo<'frame, 'data> {
-    pub code: ::jlrs::value::array::Array<'frame, 'data>,
-    pub codelocs: ::jlrs::value::Value<'frame, 'data>,
-    pub ssavaluetypes: ::jlrs::value::Value<'frame, 'data>,
-    pub ssaflags: ::jlrs::value::array::Array<'frame, 'data>,
-    pub method_for_inference_limit_heuristics: ::jlrs::value::Value<'frame, 'data>,
-    pub linetable: ::jlrs::value::Value<'frame, 'data>,
-    pub slotnames: ::jlrs::value::array::Array<'frame, 'data>,
-    pub slotflags: ::jlrs::value::array::Array<'frame, 'data>,
-    pub slottypes: ::jlrs::value::Value<'frame, 'data>,
-    pub rettype: ::jlrs::value::Value<'frame, 'data>,
-    pub parent: ::jlrs::value::Value<'frame, 'data>,
-    pub edges: ::jlrs::value::Value<'frame, 'data>,
+    pub code: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+    pub codelocs: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub ssavaluetypes: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub ssaflags: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+    pub method_for_inference_limit_heuristics: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub linetable: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub slotnames: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+    pub slotflags: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+    pub slottypes: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub rettype: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub parent: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub edges: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
     pub min_world: u64,
     pub max_world: u64,
-    pub inferred: bool,
-    pub inlineable: bool,
-    pub propagate_inbounds: bool,
-    pub pure: bool,
+    pub inferred: ::jlrs::wrappers::inline::bool::Bool,
+    pub inlineable: ::jlrs::wrappers::inline::bool::Bool,
+    pub propagate_inbounds: ::jlrs::wrappers::inline::bool::Bool,
+    pub pure: ::jlrs::wrappers::inline::bool::Bool,
 }
 
 #[repr(C)]
-#[jlrs(julia_type = "Core.Nothing")]
-#[derive(Copy, Clone, Debug, JuliaStruct)]
+#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+#[jlrs(julia_type = "Core.Nothing", zero_sized_type)]
 pub struct Nothing {
 }
 ```
 """
-function reflect(types::Vector{<:Type})::Bindings
+function reflect(types::Vector{<:Type})::Wrappers
     deps = Dict{DataType,Set{DataType}}()
     for ty in types
         extractdeps!(deps, ty)
     end
 
-    bindings = Dict{Type,Binding}()
-    insertbuiltins!(bindings)
+    wrappers = Dict{Type,Wrapper}()
+    insertbuiltins!(wrappers)
 
     for ty in toposort!(deps)
-        createbinding!(bindings, ty)
+        createwrapper!(wrappers, ty)
     end
 
-    setparamlifetimes!(bindings)
-    Bindings(bindings)
+    setparamlifetimes!(wrappers)
+    Wrappers(wrappers)
 end
 
-function strgenerics(binding::StructBinding)::Union{Nothing,String}
+function strgenerics(wrapper::StructWrapper)::Union{Nothing,String}
     generics = []
     wheres = []
-    if binding.framelifetime
+    if wrapper.framelifetime
         push!(generics, "'frame")
     end
 
-    if binding.datalifetime
+    if wrapper.datalifetime
         push!(generics, "'data")
     end
 
-    for param in binding.typeparams
+    for param in wrapper.typeparams
         if !param.elide
             push!(generics, string(param.name))
-            push!(wheres, string("    ", param.name, ": ::jlrs::traits::ValidLayout + Copy,"))
+            push!(wheres, string("    ", param.name, ": ::jlrs::layout::valid_layout::ValidLayout + Clone,"))
         end
     end
 
@@ -692,15 +692,15 @@ function strgenerics(binding::StructBinding)::Union{Nothing,String}
     end
 end
 
-function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
+function strsignature(ty::DataType, wrappers::Dict{Type,Wrapper})::String
     if ty <: Tuple
         generics = []
 
         for ty in ty.types
-            push!(generics, strsignature(ty, bindings))
+            push!(generics, strsignature(ty, wrappers))
         end
 
-        name = string("::jlrs::value::tuple::Tuple", length(generics))
+        name = string("::jlrs::wrappers::inline::tuple::Tuple", length(generics))
 
         if length(generics) > 0
             return string(name, "<", join(generics, ", "), ">")
@@ -710,28 +710,28 @@ function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
     end
 
     base = basetype(ty)
-    binding = bindings[base]
+    wrapper = wrappers[base]
 
-    name = binding.rsname
+    name = wrapper.rsname
 
     generics = []
-    if binding.framelifetime
+    if wrapper.framelifetime
         push!(generics, "'frame")
     end
 
-    if binding.datalifetime
+    if wrapper.datalifetime
         push!(generics, "'data")
     end
 
-    for (tparam, param) in zip(binding.typeparams, ty.parameters)
+    for (tparam, param) in zip(wrapper.typeparams, ty.parameters)
         if !tparam.elide
             if param isa TypeVar
-                idx = findfirst(a -> a.name == param.name, binding.typeparams)
+                idx = findfirst(a -> a.name == param.name, wrapper.typeparams)
                 if idx !== nothing
                     push!(generics, string(param.name))
                 end
             elseif param isa DataType
-                push!(generics, strsignature(param, bindings))
+                push!(generics, strsignature(param, wrappers))
             end
         end
     end
@@ -743,11 +743,11 @@ function strsignature(ty::DataType, bindings::Dict{Type,Binding})::String
     end
 end
 
-function strsignature(binding::StructBinding, field::Union{StructField,TupleField}, bindings::Dict{Type,Binding})::String
-    if field.fieldtype isa GenericBinding
+function strsignature(wrapper::StructWrapper, field::Union{StructField,TupleField}, wrappers::Dict{Type,Wrapper})::String
+    if field.fieldtype isa GenericWrapper
         return string(field.fieldtype.name)
-    elseif field.fieldtype isa TupleBinding
-        return strtuplesignature(binding, field, bindings)
+    elseif field.fieldtype isa TupleWrapper
+        return strtuplesignature(wrapper, field, wrappers)
     end
 
     generics = []
@@ -763,12 +763,12 @@ function strsignature(binding::StructBinding, field::Union{StructField,TupleFiel
     for (sparam, tparam) in zip(field.fieldtype.typeparams, field.typeparams)
         if !sparam.elide
             if tparam.value isa TypeVar
-                idx = findfirst(a -> a.name == tparam.value.name, binding.typeparams)
+                idx = findfirst(a -> a.name == tparam.value.name, wrapper.typeparams)
                 if idx !== nothing
                     push!(generics, string(tparam.value.name))
                 end
             elseif tparam.value isa DataType
-                push!(generics, strsignature(tparam.value, bindings))
+                push!(generics, strsignature(tparam.value, wrappers))
             end
         end
     end
@@ -780,11 +780,11 @@ function strsignature(binding::StructBinding, field::Union{StructField,TupleFiel
     end
 end
 
-function strtuplesignature(binding::StructBinding, field::Union{StructField,TupleField}, bindings::Dict{Type,Binding})::String
+function strtuplesignature(wrapper::StructWrapper, field::Union{StructField,TupleField}, wrappers::Dict{Type,Wrapper})::String
     generics = []
 
-    for fieldbinding in field.fieldtype.fields
-        push!(generics, strsignature(binding, fieldbinding, bindings))
+    for fieldwrapper in field.fieldtype.fields
+        push!(generics, strsignature(wrapper, fieldwrapper, wrappers))
     end
 
     if length(generics) > 0
@@ -794,37 +794,33 @@ function strtuplesignature(binding::StructBinding, field::Union{StructField,Tupl
     end
 end
 
-function strstructname(binding::StructBinding)::String
-    generics = strgenerics(binding)
+function strstructname(wrapper::StructWrapper)::String
+    generics = strgenerics(wrapper)
     if generics !== nothing
-        string(binding.rsname, generics)
+        string(wrapper.rsname, generics)
     else
-        string(binding.rsname, " ")
+        string(wrapper.rsname, " ")
     end
 end
 
-function strstructfield(binding::StructBinding, field::StructField, bindings::Dict{Type,Binding})::String
-    if field.fieldtype isa BitsUnionBinding
+function strstructfield(wrapper::StructWrapper, field::StructField, wrappers::Dict{Type,Wrapper})::String
+    if field.fieldtype isa BitsUnionWrapper
         align_field_name = string("_", field.rsname, "_align")
         flag_field_name = string(field.rsname, "_flag")
 
-        sz = 0
-        al = 0
-        for ty in Base.uniontypes(field.fieldtype.union_of)
-            sz = max(sz, sizeof(ty))
-            al = max(al, Base.datatype_alignment(ty))
-        end
+        ibu, sz, al = Base.uniontype_layout(field.fieldtype.union_of)
+        @assert ibu "Not a bits union. This should never happen, please file a bug report."
 
         alignment = if al == 1
-            "::jlrs::value::union::Align1"
+            "::jlrs::wrappers::inline::union::Align1"
         elseif al == 2
-            "::jlrs::value::union::Align2"
+            "::jlrs::wrappers::inline::union::Align2"
         elseif al == 4
-            "::jlrs::value::union::Align4"
+            "::jlrs::wrappers::inline::union::Align4"
         elseif al == 8
-            "::jlrs::value::union::Align8"
+            "::jlrs::wrappers::inline::union::Align8"
         elseif al == 16
-            "::jlrs::value::union::Align16"
+            "::jlrs::wrappers::inline::union::Align16"
         else
             error("Unsupported alignment")
         end
@@ -833,37 +829,39 @@ function strstructfield(binding::StructBinding, field::StructField, bindings::Di
             "    #[jlrs(bits_union_align)]\n",
             "    ", align_field_name, ": ", alignment, ",\n",
             "    #[jlrs(bits_union)]\n",
-            "    pub ", field.rsname, ": ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; ", sz, "]>,\n",
+            "    pub ", field.rsname, ": ::jlrs::wrappers::inline::union::BitsUnion<", sz, ">,\n",
             "    #[jlrs(bits_union_flag)]\n",
             "    pub ", flag_field_name, ": u8,",
         )
     else
-        sig = strsignature(binding, field, bindings)
+        sig = strsignature(wrapper, field, wrappers)
         string("    pub ", field.rsname, ": ", sig, ",")
     end
 end
 
-strbinding(::BuiltinBinding, ::Dict{Type,Binding})::Union{Nothing,String} = nothing
+strwrapper(::BuiltinWrapper, ::Dict{Type,Wrapper})::Union{Nothing,String} = nothing
 
-function strbinding(binding::StructBinding, bindings::Dict{Type,Binding})::Union{Nothing,String}
-    ty = getproperty(binding.typename.module, binding.typename.name)
-    isbits = ty isa DataType && !ty.hasfreetypevars && ty.isbitstype && length(ty.types) > 0 ? ", IntoJulia" : ""
+function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union{Nothing,String}
+    ty = getproperty(wrapper.typename.module, wrapper.typename.name)
+    isbits = ty isa DataType && findfirst(ty.parameters) do p p isa TypeVar end === nothing && isbitstype(ty)
+    intojulia = isbits ? ", IntoJulia" : ""
+    zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
 
     parts = [
         "#[repr(C)]",
-        string("#[jlrs(julia_type = \"", binding.typename.module, ".", binding.typename.name, "\")]"),
-        string("#[derive(Copy, Clone, Debug, JuliaStruct", isbits, ")]"),
-        string("pub struct ", strstructname(binding), "{")
+        string("#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck", intojulia, ")]"),
+        string("#[jlrs(julia_type = \"", wrapper.typename.module, ".", wrapper.typename.name, "\"", zst, ")]"),
+        string("pub struct ", strstructname(wrapper), "{")
     ]
-    for field in binding.fields
-        push!(parts, strstructfield(binding, field, bindings))
+    for field in wrapper.fields
+        push!(parts, strstructfield(wrapper, field, wrappers))
     end
     push!(parts, "}")
     join(parts, "\n")
 end
 
 """
-    renamestruct!(bindings::Bindings, type::Type, rename::String)
+    renamestruct!(wrappers::Wrappers, type::Type, rename::String)
 
 Change a struct's name. This can be useful if the name of a struct results in invalid Rust code or
 causes warnings.
@@ -874,28 +872,28 @@ julia> using JlrsReflect
 
 julia> struct Foo end;
 
-julia> bindings = reflect([Foo]);
+julia> wrappers = reflect([Foo]);
 
-julia> renamestruct!(bindings, Foo, "Bar")
+julia> renamestruct!(wrappers, Foo, "Bar")
 
-julia> bindings
+julia> wrappers
 #[repr(C)]
-#[jlrs(julia_type = "Main.Foo")]
-#[derive(Copy, Clone, Debug, JuliaStruct)]
+#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+#[jlrs(julia_type = "Main.Foo", zero_sized_type)]
 pub struct Bar {
 }
 ```
 """
-function renamestruct!(bindings::Bindings, type::Type, rename::String)::Nothing
+function renamestruct!(wrappers::Wrappers, type::Type, rename::String)::Nothing
     btype::DataType = basetype(type)
-    bindings.bindings[btype].rsname = rename
+    wrappers.dict[btype].rsname = rename
 
     nothing
 end
 
 """
-    renamefields!(bindings::Bindings, type::Type, rename::Dict{Symbol,String})
-    renamefields!(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String})
+    renamefields!(wrappers::Wrappers, type::Type, rename::Dict{Symbol,String})
+    renamefields!(wrappers::Wrappers, type::Type, rename::Vector{Pair{Symbol,String})
 
 Change some field names of a struct. This can be useful if the name of a struct results in invalid
 Rust code or causes warnings.
@@ -908,24 +906,24 @@ julia> struct Food
     🍔::Bool
 end;
 
-julia> bindings = reflect([Food]);
+julia> wrappers = reflect([Food]);
 
-julia> renamefields!(bindings, Food, [:🍔 => "burger"])
+julia> renamefields!(wrappers, Food, [:🍔 => "burger"])
 
-julia> bindings
+julia> wrappers
 #[repr(C)]
+#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
 #[jlrs(julia_type = "Main.Foo")]
-#[derive(Copy, Clone, Debug, JuliaStruct)]
 pub struct Food {
-    burger: bool
+    burger: ::jlrs::wrappers::inline::bool::Bool
 }
 ```
 """
 function renamefields! end
 
-function renamefields!(bindings::Bindings, type::Type, rename::Dict{Symbol,String})::Nothing
+function renamefields!(wrappers::Wrappers, type::Type, rename::Dict{Symbol,String})::Nothing
     btype::DataType = basetype(type)
-    for field in bindings.bindings[btype].fields
+    for field in wrappers.dict[btype].fields
         if field.name in keys(rename)
             field.rsname = rename[field.name]
         end
@@ -934,7 +932,7 @@ function renamefields!(bindings::Bindings, type::Type, rename::Dict{Symbol,Strin
     nothing
 end
 
-function renamefields!(bindings::Bindings, type::Type, rename::Vector{Pair{Symbol,String}})::Nothing
-    renamefields!(bindings, type, Dict(rename))
+function renamefields!(wrappers::Wrappers, type::Type, rename::Vector{Pair{Symbol,String}})::Nothing
+    renamefields!(wrappers, type, Dict(rename))
 end
 end

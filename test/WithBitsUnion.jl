@@ -21,11 +21,11 @@ end
 @testset "Structs with bits unions" begin
     @test begin
         b = JlrsReflect.reflect([SingleVariant])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(SingleVariant)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.SingleVariant")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct SingleVariant {
             pub a: i32,
         }"""
@@ -33,16 +33,16 @@ end
 
     @test begin
         b = JlrsReflect.reflect([DoubleVariant])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(DoubleVariant)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.DoubleVariant")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct DoubleVariant {
             #[jlrs(bits_union_align)]
-            _a_align: ::jlrs::value::union::Align4,
+            _a_align: ::jlrs::wrappers::inline::union::Align4,
             #[jlrs(bits_union)]
-            pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 4]>,
+            pub a: ::jlrs::wrappers::inline::union::BitsUnion<4>,
             #[jlrs(bits_union_flag)]
             pub a_flag: u8,
         }"""
@@ -50,16 +50,16 @@ end
 
     @test begin
         b = JlrsReflect.reflect([SizeAlignMismatch])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(SizeAlignMismatch)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.SizeAlignMismatch")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct SizeAlignMismatch {
             #[jlrs(bits_union_align)]
-            _a_align: ::jlrs::value::union::Align4,
+            _a_align: ::jlrs::wrappers::inline::union::Align4,
             #[jlrs(bits_union)]
-            pub a: ::jlrs::value::union::BitsUnion<[::std::mem::MaybeUninit<u8>; 6]>,
+            pub a: ::jlrs::wrappers::inline::union::BitsUnion<6>,
             #[jlrs(bits_union_flag)]
             pub a_flag: u8,
         }"""
@@ -67,13 +67,13 @@ end
 
     @test begin
         b = JlrsReflect.reflect([UnionInTuple])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(UnionInTuple)] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.UnionInTuple")]
-        #[derive(Copy, Clone, Debug, JuliaStruct)]
         pub struct UnionInTuple<'frame, 'data> {
-            pub a: ::jlrs::value::Value<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 

@@ -11,27 +11,27 @@ end
 @testset "Bits types with tuple fields" begin
     @test begin
         b = JlrsReflect.reflect([BitsUInt8TupleInt32Int64])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsUInt8TupleInt32Int64] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32Int64")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct BitsUInt8TupleInt32Int64 {
             pub a: u8,
-            pub b: ::jlrs::value::tuple::Tuple2<i32, i64>,
+            pub b: ::jlrs::wrappers::inline::tuple::Tuple2<i32, i64>,
         }"""
     end
 
     @test begin
         b = JlrsReflect.reflect([BitsUInt8TupleInt32TupleInt16UInt16])
-        sb = JlrsReflect.StringBindings(b)
+        sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsUInt8TupleInt32TupleInt16UInt16] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32TupleInt16UInt16")]
-        #[derive(Copy, Clone, Debug, JuliaStruct, IntoJulia)]
         pub struct BitsUInt8TupleInt32TupleInt16UInt16 {
             pub a: u8,
-            pub b: ::jlrs::value::tuple::Tuple2<i32, ::jlrs::value::tuple::Tuple2<i16, u16>>,
+            pub b: ::jlrs::wrappers::inline::tuple::Tuple2<i32, ::jlrs::wrappers::inline::tuple::Tuple2<i16, u16>>,
         }"""
     end
 end

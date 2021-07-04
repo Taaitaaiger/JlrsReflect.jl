@@ -1,5 +1,3 @@
-include("../src/JlrsReflect.jl")
-
 using Test
 include("SingleFieldBits.jl")
 include("MultiFieldBits.jl")
