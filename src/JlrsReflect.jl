@@ -621,7 +621,7 @@ pub struct StackFrame<'frame, 'data> {
 #[jlrs(julia_type = "Core.CodeInfo")]
 pub struct CodeInfo<'frame, 'data> {
     pub code: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub codelocs: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+    pub codelocs: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
     pub ssavaluetypes: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
     pub ssaflags: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
     pub method_for_inference_limit_heuristics: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
@@ -847,10 +847,15 @@ function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union
     intojulia = isbits ? ", IntoJulia" : ""
     zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
 
+    modname = string(wrapper.typename.module)
+    if startswith(modname, "Main.__doctest__")
+        modname = "Main"
+    end
+
     parts = [
         "#[repr(C)]",
         string("#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck", intojulia, ")]"),
-        string("#[jlrs(julia_type = \"", wrapper.typename.module, ".", wrapper.typename.name, "\"", zst, ")]"),
+        string("#[jlrs(julia_type = \"", modname, ".", wrapper.typename.name, "\"", zst, ")]"),
         string("pub struct ", strstructname(wrapper), "{")
     ]
     for field in wrapper.fields
@@ -870,7 +875,7 @@ causes warnings.
 ```jldoctest
 julia> using JlrsReflect
 
-julia> struct Foo end;
+julia> struct Foo end
 
 julia> wrappers = reflect([Foo]);
 
@@ -902,21 +907,20 @@ Rust code or causes warnings.
 ```jldoctest
 julia> using JlrsReflect
 
-julia> struct Food
-    🍔::Bool
-end;
+julia> struct Food burger::Bool end
 
 julia> wrappers = reflect([Food]);
 
-julia> renamefields!(wrappers, Food, [:🍔 => "burger"])
+julia> renamefields!(wrappers, Food, [:burger => "hamburger"])
 
 julia> wrappers
 #[repr(C)]
 #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
-#[jlrs(julia_type = "Main.Foo")]
+#[jlrs(julia_type = "Main.Food")]
 pub struct Food {
-    burger: ::jlrs::wrappers::inline::bool::Bool
+    pub hamburger: ::jlrs::wrappers::inline::bool::Bool,
 }
+
 ```
 """
 function renamefields! end
