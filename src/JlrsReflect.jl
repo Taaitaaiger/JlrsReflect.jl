@@ -602,48 +602,16 @@ exact path and not some other path like `Main.Foo.Bar.Baz`.
 ```jldoctest
 julia> using JlrsReflect
 
-julia> reflect([StackTraces.StackFrame])
+julia> reflect([Complex])
 #[repr(C)]
 #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
-#[jlrs(julia_type = "Base.StackTraces.StackFrame")]
-pub struct StackFrame<'frame, 'data> {
-    pub func: ::jlrs::wrappers::ptr::SymbolRef<'frame>,
-    pub file: ::jlrs::wrappers::ptr::SymbolRef<'frame>,
-    pub line: i64,
-    pub linfo: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub from_c: ::jlrs::wrappers::inline::bool::Bool,
-    pub inlined: ::jlrs::wrappers::inline::bool::Bool,
-    pub pointer: u64,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
-#[jlrs(julia_type = "Core.CodeInfo")]
-pub struct CodeInfo<'frame, 'data> {
-    pub code: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub codelocs: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub ssavaluetypes: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub ssaflags: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub method_for_inference_limit_heuristics: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub linetable: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub slotnames: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub slotflags: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
-    pub slottypes: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub rettype: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub parent: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub edges: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
-    pub min_world: u64,
-    pub max_world: u64,
-    pub inferred: ::jlrs::wrappers::inline::bool::Bool,
-    pub inlineable: ::jlrs::wrappers::inline::bool::Bool,
-    pub propagate_inbounds: ::jlrs::wrappers::inline::bool::Bool,
-    pub pure: ::jlrs::wrappers::inline::bool::Bool,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
-#[jlrs(julia_type = "Core.Nothing", zero_sized_type)]
-pub struct Nothing {
+#[jlrs(julia_type = "Base.Complex")]
+pub struct Complex<T>
+where
+    T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
+{
+    pub re: T,
+    pub im: T,
 }
 ```
 """
