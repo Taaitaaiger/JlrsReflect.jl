@@ -140,6 +140,7 @@ function insertbuiltins!(wrappers::Dict{Type,Wrapper})::Nothing
     wrappers[Int16] = BuiltinWrapper("i16", [], false, false)
     wrappers[Int32] = BuiltinWrapper("i32", [], false, false)
     wrappers[Int64] = BuiltinWrapper("i64", [], false, false)
+    wrappers[Float16] = BuiltinWrapper("::half::f16", [], false, false)
     wrappers[Float32] = BuiltinWrapper("f32", [], false, false)
     wrappers[Float64] = BuiltinWrapper("f64", [], false, false)
     wrappers[Bool] = BuiltinWrapper("::jlrs::wrappers::inline::bool::Bool", [], false, false)
@@ -477,7 +478,12 @@ end
 function createwrapper!(wrappers::Dict{Type,Wrapper}, type::Type)::Nothing
     bt = basetype(type)
 
+    if isdefined(Core, :OpaqueClosure) && bt <: Core.OpaqueClosure
+        error("Core.OpaqueClosure is not supported")
+    end
+
     if bt in keys(wrappers) return end
+
     if isabstracttype(bt)
         wrappers[bt] = wrappers[Any]
         return
