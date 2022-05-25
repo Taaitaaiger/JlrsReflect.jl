@@ -9,3 +9,7 @@ include("WithGenericFields.jl")
 include("WithBitsUnion.jl")
 include("WithNonBitsUnion.jl")
 include("ZeroSized.jl")
+
+if hasproperty(DataType.name, :atomicfields)
+    include("AtomicFields.jl")
+end

@@ -1,5 +1,5 @@
 module JlrsReflect
-
+using Base.Experimental
 export reflect, renamestruct!, renamefields!
 
 import Base: show, getindex, write
@@ -70,6 +70,10 @@ struct BuiltinWrapper <: Wrapper
     datalifetime::Bool
 end
 
+struct UnsupportedWrapper <: Wrapper
+    reason::String
+end
+
 struct Wrappers
     dict::Dict{Type,Wrapper}
 end
@@ -131,7 +135,7 @@ function write(io::IO, wrappers::Wrappers)
     write(io, join(rustimpls, "\n\n"), "\n")
 end
 
-function insertbuiltins!(wrappers::Dict{Type,Wrapper})::Nothing
+function insertbuiltins!(wrappers::Dict{Type,Wrapper}; f16::Bool=false, internaltypes::Bool=false)::Nothing
     wrappers[UInt8] = BuiltinWrapper("u8", [], false, false)
     wrappers[UInt16] = BuiltinWrapper("u16", [], false, false)
     wrappers[UInt32] = BuiltinWrapper("u32", [], false, false)
@@ -140,24 +144,29 @@ function insertbuiltins!(wrappers::Dict{Type,Wrapper})::Nothing
     wrappers[Int16] = BuiltinWrapper("i16", [], false, false)
     wrappers[Int32] = BuiltinWrapper("i32", [], false, false)
     wrappers[Int64] = BuiltinWrapper("i64", [], false, false)
-    wrappers[Float16] = BuiltinWrapper("::half::f16", [], false, false)
+
+    if f16
+        wrappers[Float16] = BuiltinWrapper("::half::f16", [], false, false)
+    else
+        wrappers[Float16] = UnsupportedWrapper("Wrappers with Float16 fields can only be generated when f16 is set to true.")
+    end
+
     wrappers[Float32] = BuiltinWrapper("f32", [], false, false)
     wrappers[Float64] = BuiltinWrapper("f64", [], false, false)
     wrappers[Bool] = BuiltinWrapper("::jlrs::wrappers::inline::bool::Bool", [], false, false)
     wrappers[Char] = BuiltinWrapper("::jlrs::wrappers::inline::char::Char", [], false, false)
-    wrappers[Core.SSAValue] = BuiltinWrapper("::jlrs::wrappers::inline::ssa_value::SSAValue", [], false, false)
+
+    if internaltypes
+        wrappers[Core.SSAValue] = BuiltinWrapper("::jlrs::wrappers::inline::ssa_value::SSAValue", [], false, false)
+    else
+        wrappers[Core.SSAValue] = UnsupportedWrapper("Wrappers for Core.SSAValue can only be generated when internaltypes is set to true.")
+    end
+
     wrappers[Union{}] = BuiltinWrapper("::jlrs::wrappers::inline::union::EmptyUnion", [], false, false)
 
     wrappers[Any] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
     wrappers[basetype(Array)] = BuiltinWrapper("::jlrs::wrappers::ptr::ArrayRef", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
-    wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::CodeInstanceRef", [], true, false)
     wrappers[DataType] = BuiltinWrapper("::jlrs::wrappers::ptr::DataTypeRef", [], true, false)
-    wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::ExprRef", [], true, false)
-    wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
-    wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodInstanceRef", [], true, false)
-    wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodMatchRef", [], true, false)
-    wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodTableRef", [], true, false)
-    wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
     wrappers[Module] = BuiltinWrapper("::jlrs::wrappers::ptr::ModuleRef", [], true, false)
     wrappers[Core.SimpleVector] = BuiltinWrapper("::jlrs::wrappers::ptr::SimpleVectorRef", [], true, false)
     wrappers[String] = BuiltinWrapper("::jlrs::wrappers::ptr::StringRef", [], true, false)
@@ -165,11 +174,38 @@ function insertbuiltins!(wrappers::Dict{Type,Wrapper})::Nothing
     wrappers[Task] = BuiltinWrapper("::jlrs::wrappers::ptr::TaskRef", [], true, false)
     wrappers[Core.TypeName] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeNameRef", [], true, false)
     wrappers[TypeVar] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeVarRef", [], true, false)
-    wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapEntryRef", [], true, false)
-    wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapLevelRef", [], true, false)
     wrappers[Union] = BuiltinWrapper("::jlrs::wrappers::ptr::UnionRef", [], true, false)
     wrappers[UnionAll] = BuiltinWrapper("::jlrs::wrappers::ptr::UnionAllRef", [], true, false)
-    wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::WeakRefRef", [], true, false)
+
+    if internaltypes
+        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::CodeInstanceRef", [], true, false)
+        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::ExprRef", [], true, false)
+        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
+        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodInstanceRef", [], true, false)
+        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodMatchRef", [], true, false)
+        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodTableRef", [], true, false)
+        if isdefined(Core, :OpaqueClosure)
+            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::OpaqueClosureRef", [], true, false)
+        end
+        wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::MethodRef", [], true, false)
+        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapEntryRef", [], true, false)
+        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::TypeMapLevelRef", [], true, false)
+        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::WeakRefRef", [], true, false)
+    else
+        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        if isdefined(Core, :OpaqueClosure)
+            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        end
+        wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::ValueRef", [], true, true)
+    end
 
     nothing
 end
@@ -186,7 +222,9 @@ function toposort!(data::Dict{DataType,Set{DataType}})::Vector{Type}
     rst = Vector()
     while true
         ordered = Set(item for (item, dep) in data if isempty(dep))
-        if isempty(ordered) break end
+        if isempty(ordered)
+            break
+        end
         append!(rst, ordered)
         data = Dict(item => setdiff(dep, ordered) for (item, dep) in data if item ∉ ordered)
     end
@@ -229,7 +267,9 @@ end
 function isnonparametric(type::Union)::Bool
     for utype in Base.uniontypes(type)
         if utype isa DataType
-            if findfirst(utype.parameters) do p p isa TypeVar end !== nothing
+            if findfirst(utype.parameters) do p
+                p isa TypeVar
+            end !== nothing
                 return false
             end
 
@@ -242,40 +282,48 @@ function isnonparametric(type::Union)::Bool
     true
 end
 
-function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, type::DataType)::Nothing
+function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, type::DataType, wrappers::Dict{Type,Wrapper})::Nothing
     for ttype in type.types
-        extractdeps!(acc, ttype)
+        extractdeps!(acc, ttype, wrappers)
     end
 
     nothing
 end
 
-function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, type::DataType)::Nothing
+function extracttupledeps!(acc::Dict{DataType,Set{DataType}}, key::DataType, type::DataType, wrappers::Dict{Type,Wrapper})::Nothing
     for ttype in type.types
         if ttype isa DataType
             if ttype <: Tuple
                 if !isconcretetype(ttype)
-                    extracttupledeps!(acc, ttype)
+                    extracttupledeps!(acc, ttype, wrappers)
                 else
-                    extracttupledeps!(acc, key, ttype)
+                    extracttupledeps!(acc, key, ttype, wrappers)
                 end
             else
                 tbase = basetype(ttype)
                 push!(acc[key], tbase)
-                extractdeps!(acc, ttype)
+                extractdeps!(acc, ttype, wrappers)
             end
         elseif ttype isa Union
-            extractdeps!(acc, ttype)
+            extractdeps!(acc, ttype, wrappers)
         end
     end
 
     nothing
 end
 
-function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
+function hasatomicfields(type::DataType)::Bool
+    if hasproperty(type.name, :atomicfields)
+        return type.name.atomicfields != C_NULL
+    end
+
+    false
+end
+
+function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type, wrappers::Dict{Type,Wrapper})::Nothing
     if type isa DataType
         if type <: Tuple
-            return extracttupledeps!(acc, type)
+            return extracttupledeps!(acc, type, wrappers)
         elseif isabstracttype(type)
             return
         end
@@ -283,31 +331,37 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
         partial = partialtype(type)
         base = basetype(type)
 
-        if !(base in keys(acc)) && !(base in keys(BUILTINS) )
+        if (base in keys(wrappers)) && wrappers[base] isa UnsupportedWrapper
+            error(wrappers[base].reason)
+        end
+
+        if !(base in keys(acc)) && !(base in keys(wrappers))
             acc[base] = Set()
 
             for btype in base.types
                 if btype isa DataType
                     if btype <: Tuple
-                        if findfirst(btype.parameters) do p p isa TypeVar end !== nothing
+                        if findfirst(btype.parameters) do p
+                            p isa TypeVar
+                        end !== nothing
                             error("Tuple fields with type parameters are not supported")
                         elseif !isconcretetype(btype)
-                            extracttupledeps!(acc, btype)
+                            extracttupledeps!(acc, btype, wrappers)
                         else
-                            extracttupledeps!(acc, type, btype)
+                            extracttupledeps!(acc, type, btype, wrappers)
                         end
                     else
                         bbase = basetype(btype)
                         push!(acc[base], bbase)
-                        extractdeps!(acc, btype)
+                        extractdeps!(acc, btype, wrappers)
                     end
                 elseif btype isa UnionAll
-                    extractdeps!(acc, btype)
+                    extractdeps!(acc, btype, wrappers)
                 elseif btype isa Union
                     if !isnonparametric(btype)
                         error("Unions with type parameters are not supported")
                     end
-                    extractdeps!(acc, btype)
+                    extractdeps!(acc, btype, wrappers)
                 end
             end
         end
@@ -319,18 +373,18 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type)::Nothing
             btype = btypes[i]
             ptype = ptypes[i]
             if btype isa TypeVar && ptype isa Type
-                extractdeps!(acc, ptype)
+                extractdeps!(acc, ptype, wrappers)
             end
         end
     elseif type isa UnionAll
-        extractdeps!(acc, partialtype(type))
+        extractdeps!(acc, partialtype(type), wrappers)
     elseif type isa Union
         for uniontype in Base.uniontypes(type)
             if uniontype isa TypeVar
                 error("Unions with type parameters are not supported")
             end
 
-            extractdeps!(acc, uniontype)
+            extractdeps!(acc, uniontype, wrappers)
         end
     end
 
@@ -478,11 +532,15 @@ end
 function createwrapper!(wrappers::Dict{Type,Wrapper}, type::Type)::Nothing
     bt = basetype(type)
 
-    if isdefined(Core, :OpaqueClosure) && bt <: Core.OpaqueClosure
-        error("Core.OpaqueClosure is not supported")
+    if bt in keys(wrappers)
+        return
     end
 
-    if bt in keys(wrappers) return end
+    if hasatomicfields(bt)
+
+        return
+
+    end
 
     if isabstracttype(bt)
         wrappers[bt] = wrappers[Any]
@@ -550,7 +608,7 @@ function haslifetimes(ty::Type, wrappers::Dict{Type,JlrsReflect.Wrapper})::Tuple
 end
 
 function setparamlifetimes!(wrappers::Dict{Type,JlrsReflect.Wrapper})::Nothing
-    for (ty, wrapper) in wrappers
+    for (_, wrapper) in wrappers
         if wrapper isa StructWrapper
             framelifetime = wrapper.framelifetime
             datalifetime = wrapper.datalifetime
@@ -559,22 +617,16 @@ function setparamlifetimes!(wrappers::Dict{Type,JlrsReflect.Wrapper})::Nothing
                 continue
             end
 
-            for field in wrapper.fields
-                for param in field.typeparams
-                    if param.value !== nothing && !(param.value isa TypeVar)
-                        framelt, datalt = haslifetimes(param.value, wrappers)
-                        if datalt
-                            framelifetime = true
-                            datalifetime = true
-                            break
-                        end
-
-                        framelifetime |= framelt
+            for field in wrapper.fields, param in field.typeparams
+                if param.value !== nothing && !(param.value isa TypeVar)
+                    framelt, datalt = haslifetimes(param.value, wrappers)
+                    if datalt
+                        framelifetime = true
+                        datalifetime = true
+                        break
                     end
-                end
 
-                if wrapper.datalifetime
-                    break
+                    framelifetime |= framelt
                 end
             end
 
@@ -587,7 +639,7 @@ function setparamlifetimes!(wrappers::Dict{Type,JlrsReflect.Wrapper})::Nothing
 end
 
 """
-    reflect(types::Vector{<:Type})::Wrappers
+    reflect(types::Vector{<:Type}; f16::Bool=false, internaltypes::Bool=false)::Wrappers
 
 Generate Rust wrappers for all types in `types` and their dependencies. The only requirement is
 that these types must not contain any union or tuple fields that depend on a type parameter.
@@ -596,6 +648,12 @@ parameters, so you can't avoid this restriction by explicitly providing a more q
 The only effect qualifying types has, is that wrappers for the used parameters will also be
 generated. The wrappers will derive `Unbox` and `ValidLayout`, and `IntoJulia` if it's a
 bits-type with no type parameters.
+
+Some types are only available in jlrs if the `internal-types` feature is enabled, if you've
+enabled this feature you can set the `internaltypes` keyword argument to `true` to make use of
+these provided wrappers in the unlikely case that the types you're reflecting depend on them.
+Similarly, the `Float16` type can only be reflected when the `f16` feature is enabled in jlrs and
+the `f16` keyword argument is set to `true`.
 
 The result of this function can be written to a file, its contents will normally be a valid Rust
 module.
@@ -621,14 +679,14 @@ where
 }
 ```
 """
-function reflect(types::Vector{<:Type})::Wrappers
+function reflect(types::Vector{<:Type}; f16::Bool=false, internaltypes::Bool=false)::Wrappers
     deps = Dict{DataType,Set{DataType}}()
-    for ty in types
-        extractdeps!(deps, ty)
-    end
-
     wrappers = Dict{Type,Wrapper}()
-    insertbuiltins!(wrappers)
+    insertbuiltins!(wrappers; f16, internaltypes)
+
+    for ty in types
+        extractdeps!(deps, ty, wrappers)
+    end
 
     for ty in toposort!(deps)
         createwrapper!(wrappers, ty)
@@ -815,9 +873,20 @@ end
 
 strwrapper(::BuiltinWrapper, ::Dict{Type,Wrapper})::Union{Nothing,String} = nothing
 
+function strwrapper(::UnsupportedWrapper, ::Dict{Type,Wrapper})::Union{Nothing,String} end
+
 function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union{Nothing,String}
     ty = getproperty(wrapper.typename.module, wrapper.typename.name)
-    isbits = ty isa DataType && findfirst(ty.parameters) do p p isa TypeVar end === nothing && isbitstype(ty)
+    isbits = ty isa DataType && findfirst(ty.parameters) do p
+                 p isa TypeVar
+             end === nothing && isbitstype(ty)
+    intojulia = isbits ? ", IntoJulia" : ""
+    zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
+
+    modname = string(wrapper.typename.module)
+    if startswith(modname, "Main.__doctest__")
+        modname = "Main"
+    end
     intojulia = isbits ? ", IntoJulia" : ""
     zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
 

@@ -1,6 +1,10 @@
 # This file is machine-generated - editing it directly is not advised
 
-[[JlrsReflect]]
+julia_version = "1.8.0-beta3"
+manifest_format = "2.0"
+project_hash = "e82a2cbe82b1e32e180b005b5e0fe23db430d1a9"
+
+[[deps.JlrsReflect]]
 path = "/home/thomas/Projects/Julia/JlrsReflect.jl"
 uuid = "3e9c415f-dc9c-4763-9f27-843ce091455a"
 version = "0.2.0"

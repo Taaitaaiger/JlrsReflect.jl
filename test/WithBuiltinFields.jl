@@ -90,8 +90,8 @@ end
         sb[WithCodeInstance] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithCodeInstance")]
-        pub struct WithCodeInstance<'frame> {
-            pub a: ::jlrs::wrappers::ptr::CodeInstanceRef<'frame>,
+        pub struct WithCodeInstance<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -114,8 +114,8 @@ end
         sb[WithExpr] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithExpr")]
-        pub struct WithExpr<'frame> {
-            pub a: ::jlrs::wrappers::ptr::ExprRef<'frame>,
+        pub struct WithExpr<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -138,8 +138,8 @@ end
         sb[WithMethod] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethod")]
-        pub struct WithMethod<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodRef<'frame>,
+        pub struct WithMethod<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -150,8 +150,8 @@ end
         sb[WithMethodInstance] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodInstance")]
-        pub struct WithMethodInstance<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodInstanceRef<'frame>,
+        pub struct WithMethodInstance<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -162,8 +162,8 @@ end
         sb[WithMethodTable] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodTable")]
-        pub struct WithMethodTable<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodTableRef<'frame>,
+        pub struct WithMethodTable<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -222,8 +222,8 @@ end
         sb[WithTypeMapEntry] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapEntry")]
-        pub struct WithTypeMapEntry<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeMapEntryRef<'frame>,
+        pub struct WithTypeMapEntry<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -234,8 +234,8 @@ end
         sb[WithTypeMapLevel] === """#[repr(C)]
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapLevel")]
-        pub struct WithTypeMapLevel<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeMapLevelRef<'frame>,
+        pub struct WithTypeMapLevel<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -284,6 +284,116 @@ end
         #[jlrs(julia_type = "Main.WithUnionAll")]
         pub struct WithUnionAll<'frame> {
             pub a: ::jlrs::wrappers::ptr::UnionAllRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithCodeInstance]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithCodeInstance] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithCodeInstance")]
+        pub struct WithCodeInstance<'frame> {
+            pub a: ::jlrs::wrappers::ptr::CodeInstanceRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithArray])
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithArray] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithArray")]
+        pub struct WithArray<'frame, 'data> {
+            pub a: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+        }"""
+    end
+
+    
+
+    @test begin
+        b = JlrsReflect.reflect([WithDataType])
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithDataType] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithDataType")]
+        pub struct WithDataType<'frame> {
+            pub a: ::jlrs::wrappers::ptr::DataTypeRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithExpr]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithExpr] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithExpr")]
+        pub struct WithExpr<'frame> {
+            pub a: ::jlrs::wrappers::ptr::ExprRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithMethod]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithMethod] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithMethod")]
+        pub struct WithMethod<'frame> {
+            pub a: ::jlrs::wrappers::ptr::MethodRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithMethodInstance]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithMethodInstance] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithMethodInstance")]
+        pub struct WithMethodInstance<'frame> {
+            pub a: ::jlrs::wrappers::ptr::MethodInstanceRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithMethodTable]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithMethodTable] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithMethodTable")]
+        pub struct WithMethodTable<'frame> {
+            pub a: ::jlrs::wrappers::ptr::MethodTableRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithTypeMapEntry]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithTypeMapEntry] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithTypeMapEntry")]
+        pub struct WithTypeMapEntry<'frame> {
+            pub a: ::jlrs::wrappers::ptr::TypeMapEntryRef<'frame>,
+        }"""
+    end
+
+    @test begin
+        b = JlrsReflect.reflect([WithTypeMapLevel]; internaltypes=true)
+        sb = JlrsReflect.StringWrappers(b)
+
+        sb[WithTypeMapLevel] === """#[repr(C)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[jlrs(julia_type = "Main.WithTypeMapLevel")]
+        pub struct WithTypeMapLevel<'frame> {
+            pub a: ::jlrs::wrappers::ptr::TypeMapLevelRef<'frame>,
         }"""
     end
 end
