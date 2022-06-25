@@ -97,7 +97,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithGenericUnionAll")]
         pub struct WithGenericUnionAll<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -125,7 +125,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetime")]
         pub struct WithPropagatedLifetime<'frame> {
-            pub a: WithGenericT<::jlrs::wrappers::ptr::ModuleRef<'frame>>,
+            pub a: WithGenericT<::jlrs::wrappers::ptr::module::ModuleRef<'frame>>,
         }"""
     end
 
@@ -137,7 +137,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetimes")]
         pub struct WithPropagatedLifetimes<'frame, 'data> {
-            pub a: WithGenericT<::jlrs::wrappers::inline::tuple::Tuple2<i32, WithGenericT<::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>>>>,
+            pub a: WithGenericT<::jlrs::wrappers::inline::tuple::Tuple2<i32, WithGenericT<::jlrs::wrappers::ptr::array::ArrayRef<'frame, 'data>>>>,
         }"""
     end
 end

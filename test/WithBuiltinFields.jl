@@ -79,7 +79,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithArray")]
         pub struct WithArray<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::array::ArrayRef<'frame, 'data>,
         }"""
     end
 
@@ -91,7 +91,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithCodeInstance")]
         pub struct WithCodeInstance<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -103,7 +103,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithDataType")]
         pub struct WithDataType<'frame> {
-            pub a: ::jlrs::wrappers::ptr::DataTypeRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::datatype::DataTypeRef<'frame>,
         }"""
     end
 
@@ -115,7 +115,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithExpr")]
         pub struct WithExpr<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -127,7 +127,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithString")]
         pub struct WithString<'frame> {
-            pub a: ::jlrs::wrappers::ptr::StringRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::string::StringRef<'frame>,
         }"""
     end
 
@@ -139,7 +139,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethod")]
         pub struct WithMethod<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -151,7 +151,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodInstance")]
         pub struct WithMethodInstance<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -163,7 +163,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodTable")]
         pub struct WithMethodTable<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -175,7 +175,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithModule")]
         pub struct WithModule<'frame> {
-            pub a: ::jlrs::wrappers::ptr::ModuleRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::module::ModuleRef<'frame>,
         }"""
     end
 
@@ -187,7 +187,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithSimpleVector")]
         pub struct WithSimpleVector<'frame> {
-            pub a: ::jlrs::wrappers::ptr::SimpleVectorRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::simple_vector::SimpleVectorRef<'frame>,
         }"""
     end
 
@@ -199,7 +199,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithSymbol")]
         pub struct WithSymbol<'frame> {
-            pub a: ::jlrs::wrappers::ptr::SymbolRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::symbol::SymbolRef<'frame>,
         }"""
     end
 
@@ -211,7 +211,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTask")]
         pub struct WithTask<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TaskRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::task::TaskRef<'frame>,
         }"""
     end
 
@@ -223,7 +223,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapEntry")]
         pub struct WithTypeMapEntry<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -235,7 +235,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapLevel")]
         pub struct WithTypeMapLevel<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 
@@ -247,7 +247,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeName")]
         pub struct WithTypeName<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeNameRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::type_name::TypeNameRef<'frame>,
         }"""
     end
 
@@ -259,7 +259,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeVar")]
         pub struct WithTypeVar<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeVarRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::type_var::TypeVarRef<'frame>,
         }"""
     end
 
@@ -271,7 +271,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithUnion")]
         pub struct WithUnion<'frame> {
-            pub a: ::jlrs::wrappers::ptr::UnionRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::union::UnionRef<'frame>,
         }"""
     end
 
@@ -283,7 +283,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithUnionAll")]
         pub struct WithUnionAll<'frame> {
-            pub a: ::jlrs::wrappers::ptr::UnionAllRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::union_all::UnionAllRef<'frame>,
         }"""
     end
 
@@ -295,7 +295,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithCodeInstance")]
         pub struct WithCodeInstance<'frame> {
-            pub a: ::jlrs::wrappers::ptr::CodeInstanceRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::code_instance::CodeInstanceRef<'frame>,
         }"""
     end
 
@@ -307,7 +307,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithArray")]
         pub struct WithArray<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ArrayRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::array::ArrayRef<'frame, 'data>,
         }"""
     end
 
@@ -321,7 +321,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithDataType")]
         pub struct WithDataType<'frame> {
-            pub a: ::jlrs::wrappers::ptr::DataTypeRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::datatype::DataTypeRef<'frame>,
         }"""
     end
 
@@ -333,7 +333,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithExpr")]
         pub struct WithExpr<'frame> {
-            pub a: ::jlrs::wrappers::ptr::ExprRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::expr::ExprRef<'frame>,
         }"""
     end
 
@@ -345,7 +345,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethod")]
         pub struct WithMethod<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::method::MethodRef<'frame>,
         }"""
     end
 
@@ -357,7 +357,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodInstance")]
         pub struct WithMethodInstance<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodInstanceRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::method_instance::MethodInstanceRef<'frame>,
         }"""
     end
 
@@ -369,7 +369,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithMethodTable")]
         pub struct WithMethodTable<'frame> {
-            pub a: ::jlrs::wrappers::ptr::MethodTableRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::method_table::MethodTableRef<'frame>,
         }"""
     end
 
@@ -381,7 +381,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapEntry")]
         pub struct WithTypeMapEntry<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeMapEntryRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::typemap_entry::TypeMapEntryRef<'frame>,
         }"""
     end
 
@@ -393,7 +393,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.WithTypeMapLevel")]
         pub struct WithTypeMapLevel<'frame> {
-            pub a: ::jlrs::wrappers::ptr::TypeMapLevelRef<'frame>,
+            pub a: ::jlrs::wrappers::ptr::internal::typemap_level::TypeMapLevelRef<'frame>,
         }"""
     end
 end

@@ -73,7 +73,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.UnionInTuple")]
         pub struct UnionInTuple<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 

@@ -11,7 +11,7 @@ end
         #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
         #[jlrs(julia_type = "Main.NonBitsUnion")]
         pub struct NonBitsUnion<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::ValueRef<'frame, 'data>,
+            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
         }"""
     end
 end
