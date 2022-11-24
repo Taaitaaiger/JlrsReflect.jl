@@ -12,11 +12,11 @@ You can use this package by calling the `reflect` function with a `Vector` of ty
 
 ```julia
 struct TypeA
-    ...fields
+    # ...fields
 end
 
 struct TypeB{T}
-    ...fields
+    # ...fields
 end
 
 ...

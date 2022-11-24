@@ -15,7 +15,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsIntBool] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsIntBool")]
         pub struct BitsIntBool {
             pub a: i64,
@@ -28,7 +28,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsCharFloat32Float64] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsCharFloat32Float64")]
         pub struct BitsCharFloat32Float64 {
             pub a: ::jlrs::wrappers::inline::char::Char,

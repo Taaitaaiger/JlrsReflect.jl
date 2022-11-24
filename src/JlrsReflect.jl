@@ -28,6 +28,7 @@ mutable struct StructField
     referenced::Set{TypeVar}
     framelifetime::Bool
     datalifetime::Bool
+    asvalue::Bool
 end
 
 struct BitsUnionWrapper <: Wrapper
@@ -41,11 +42,13 @@ end
 mutable struct StructWrapper <: Wrapper
     name::Symbol
     typename::Core.TypeName
+    type::DataType
     rsname::String
     fields::Vector{StructField}
     typeparams::Vector{StructParameter}
     framelifetime::Bool
     datalifetime::Bool
+    hasmutables::Bool
 end
 
 struct TupleField
@@ -68,6 +71,7 @@ struct BuiltinWrapper <: Wrapper
     typeparams::Vector{StructParameter}
     framelifetime::Bool
     datalifetime::Bool
+    pointerfield::Bool
 end
 
 struct UnsupportedWrapper <: Wrapper
@@ -136,74 +140,74 @@ function write(io::IO, wrappers::Wrappers)
 end
 
 function insertbuiltins!(wrappers::Dict{Type,Wrapper}; f16::Bool=false, internaltypes::Bool=false)::Nothing
-    wrappers[UInt8] = BuiltinWrapper("u8", [], false, false)
-    wrappers[UInt16] = BuiltinWrapper("u16", [], false, false)
-    wrappers[UInt32] = BuiltinWrapper("u32", [], false, false)
-    wrappers[UInt64] = BuiltinWrapper("u64", [], false, false)
-    wrappers[Int8] = BuiltinWrapper("i8", [], false, false)
-    wrappers[Int16] = BuiltinWrapper("i16", [], false, false)
-    wrappers[Int32] = BuiltinWrapper("i32", [], false, false)
-    wrappers[Int64] = BuiltinWrapper("i64", [], false, false)
+    wrappers[UInt8] = BuiltinWrapper("u8", [], false, false, false)
+    wrappers[UInt16] = BuiltinWrapper("u16", [], false, false, false)
+    wrappers[UInt32] = BuiltinWrapper("u32", [], false, false, false)
+    wrappers[UInt64] = BuiltinWrapper("u64", [], false, false, false)
+    wrappers[Int8] = BuiltinWrapper("i8", [], false, false, false)
+    wrappers[Int16] = BuiltinWrapper("i16", [], false, false, false)
+    wrappers[Int32] = BuiltinWrapper("i32", [], false, false, false)
+    wrappers[Int64] = BuiltinWrapper("i64", [], false, false, false)
 
     if f16
-        wrappers[Float16] = BuiltinWrapper("::half::f16", [], false, false)
+        wrappers[Float16] = BuiltinWrapper("::half::f16", [], false, false, false)
     else
         wrappers[Float16] = UnsupportedWrapper("Wrappers with Float16 fields can only be generated when f16 is set to true.")
     end
 
-    wrappers[Float32] = BuiltinWrapper("f32", [], false, false)
-    wrappers[Float64] = BuiltinWrapper("f64", [], false, false)
-    wrappers[Bool] = BuiltinWrapper("::jlrs::wrappers::inline::bool::Bool", [], false, false)
-    wrappers[Char] = BuiltinWrapper("::jlrs::wrappers::inline::char::Char", [], false, false)
+    wrappers[Float32] = BuiltinWrapper("f32", [], false, false, false)
+    wrappers[Float64] = BuiltinWrapper("f64", [], false, false, false)
+    wrappers[Bool] = BuiltinWrapper("::jlrs::wrappers::inline::bool::Bool", [], false, false, false)
+    wrappers[Char] = BuiltinWrapper("::jlrs::wrappers::inline::char::Char", [], false, false, false)
 
     if internaltypes
-        wrappers[Core.SSAValue] = BuiltinWrapper("::jlrs::wrappers::inline::ssa_value::SSAValue", [], false, false)
+        wrappers[Core.SSAValue] = BuiltinWrapper("::jlrs::wrappers::inline::ssa_value::SSAValue", [], false, false, false)
     else
         wrappers[Core.SSAValue] = UnsupportedWrapper("Wrappers for Core.SSAValue can only be generated when internaltypes is set to true.")
     end
 
-    wrappers[Union{}] = BuiltinWrapper("::jlrs::wrappers::inline::union::EmptyUnion", [], false, false)
+    wrappers[Union{}] = BuiltinWrapper("::jlrs::wrappers::inline::union::EmptyUnion", [], false, false, false)
 
-    wrappers[Any] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-    wrappers[basetype(Array)] = BuiltinWrapper("::jlrs::wrappers::ptr::array::ArrayRef", [StructParameter(:T, true), StructParameter(:N, true)], true, true)
-    wrappers[DataType] = BuiltinWrapper("::jlrs::wrappers::ptr::datatype::DataTypeRef", [], true, false)
-    wrappers[Module] = BuiltinWrapper("::jlrs::wrappers::ptr::module::ModuleRef", [], true, false)
-    wrappers[Core.SimpleVector] = BuiltinWrapper("::jlrs::wrappers::ptr::simple_vector::SimpleVectorRef", [], true, false)
-    wrappers[String] = BuiltinWrapper("::jlrs::wrappers::ptr::string::StringRef", [], true, false)
-    wrappers[Symbol] = BuiltinWrapper("::jlrs::wrappers::ptr::symbol::SymbolRef", [], true, false)
-    wrappers[Task] = BuiltinWrapper("::jlrs::wrappers::ptr::task::TaskRef", [], true, false)
-    wrappers[Core.TypeName] = BuiltinWrapper("::jlrs::wrappers::ptr::type_name::TypeNameRef", [], true, false)
-    wrappers[TypeVar] = BuiltinWrapper("::jlrs::wrappers::ptr::type_var::TypeVarRef", [], true, false)
-    wrappers[Union] = BuiltinWrapper("::jlrs::wrappers::ptr::union::UnionRef", [], true, false)
-    wrappers[UnionAll] = BuiltinWrapper("::jlrs::wrappers::ptr::union_all::UnionAllRef", [], true, false)
+    wrappers[Any] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+    wrappers[basetype(Array)] = BuiltinWrapper("::jlrs::wrappers::ptr::array::ArrayRef", [StructParameter(:T, true), StructParameter(:N, true)], true, true, true)
+    wrappers[DataType] = BuiltinWrapper("::jlrs::wrappers::ptr::datatype::DataTypeRef", [], true, false, true)
+    wrappers[Module] = BuiltinWrapper("::jlrs::wrappers::ptr::module::ModuleRef", [], true, false, true)
+    wrappers[Core.SimpleVector] = BuiltinWrapper("::jlrs::wrappers::ptr::simple_vector::SimpleVectorRef", [], true, false, true)
+    wrappers[String] = BuiltinWrapper("::jlrs::wrappers::ptr::string::StringRef", [], true, false, true)
+    wrappers[Symbol] = BuiltinWrapper("::jlrs::wrappers::ptr::symbol::SymbolRef", [], true, false, true)
+    wrappers[Task] = BuiltinWrapper("::jlrs::wrappers::ptr::task::TaskRef", [], true, false, true)
+    wrappers[Core.TypeName] = BuiltinWrapper("::jlrs::wrappers::ptr::type_name::TypeNameRef", [], true, false, true)
+    wrappers[TypeVar] = BuiltinWrapper("::jlrs::wrappers::ptr::type_var::TypeVarRef", [], true, false, true)
+    wrappers[Union] = BuiltinWrapper("::jlrs::wrappers::ptr::union::UnionRef", [], true, false, true)
+    wrappers[UnionAll] = BuiltinWrapper("::jlrs::wrappers::ptr::union_all::UnionAllRef", [], true, false, true)
 
     if internaltypes
-        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::code_instance::CodeInstanceRef", [], true, false)
-        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::expr::ExprRef", [], true, false)
-        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method::MethodRef", [], true, false)
-        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_instance::MethodInstanceRef", [], true, false)
-        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_match::MethodMatchRef", [], true, false)
-        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_table::MethodTableRef", [], true, false)
+        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::code_instance::CodeInstanceRef", [], true, false, true)
+        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::expr::ExprRef", [], true, false, true)
+        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method::MethodRef", [], true, false, true)
+        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_instance::MethodInstanceRef", [], true, false, true)
+        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_match::MethodMatchRef", [], true, false, true)
+        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::method_table::MethodTableRef", [], true, false, true)
         if isdefined(Core, :OpaqueClosure)
-            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::opaque_closure::OpaqueClosureRef", [], true, false)
+            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::opaque_closure::OpaqueClosureRef", [], true, false, true)
         end
-        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::typemap_entry::TypeMapEntryRef", [], true, false)
-        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::typemap_level::TypeMapLevelRef", [], true, false)
-        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::weak_ref::WeakRefRef", [], true, false)
+        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::typemap_entry::TypeMapEntryRef", [], true, false, true)
+        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::internal::typemap_level::TypeMapLevelRef", [], true, false, true)
+        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::weak_ref::WeakRefRef", [], true, false, true)
     else
-        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
+        wrappers[Core.CodeInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Expr] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Method] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Core.MethodInstance] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Core.MethodMatch] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Core.MethodTable] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
         if isdefined(Core, :OpaqueClosure)
-            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
+            wrappers[basetype(Core.OpaqueClosure)] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
         end
-        wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
-        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true)
+        wrappers[Core.Method] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Core.TypeMapEntry] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[Core.TypeMapLevel] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
+        wrappers[WeakRef] = BuiltinWrapper("::jlrs::wrappers::ptr::value::ValueRef", [], true, true, true)
     end
 
     nothing
@@ -368,7 +372,7 @@ function extractdeps!(acc::Dict{DataType,Set{DataType}}, type::Type, wrappers::D
         btypes = base.parameters
         ptypes = partial.parameters
 
-        for i in 1:length(btypes)
+        for i in eachindex(btypes)
             btype = btypes[i]
             ptype = ptypes[i]
             if btype isa TypeVar && ptype isa Type
@@ -479,7 +483,7 @@ end
 
 function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, wrappers::Dict{Type,Wrapper})::StructField
     if fieldtype isa TypeVar
-        StructField(fieldname, string(fieldname), GenericWrapper(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false)
+        StructField(fieldname, string(fieldname), GenericWrapper(fieldtype.name), [TypeParameter(fieldtype.name, fieldtype)], Set([fieldtype]), false, false, false)
     elseif fieldtype isa UnionAll
         bt = basetype(fieldtype)
 
@@ -489,37 +493,42 @@ function structfield(fieldname::Symbol, fieldtype::Union{Type,TypeVar}, wrappers
             fieldwrapper = wrappers[bt]
             tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, bt.parameters))
             references = extractparams(bt, wrappers)
-            StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime)
+            StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime, false)
         else
-            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true, false)
         end
     elseif fieldtype isa Union
         if Base.isbitsunion(fieldtype)
-            StructField(fieldname, string(fieldname), BitsUnionWrapper(fieldtype), [], Set(), false, false)
+            StructField(fieldname, string(fieldname), BitsUnionWrapper(fieldtype), [], Set(), false, false, false)
         else
-            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true, false)
         end
     elseif fieldtype == Union{}
-        StructField(fieldname, string(fieldname), wrappers[Union{}], [], Set(), false, false)
+        StructField(fieldname, string(fieldname), wrappers[Union{}], [], Set(), false, false, false)
     elseif fieldtype <: Tuple
         params = extractparams(fieldtype, wrappers)
         if length(params) > 0
             error("Tuples with type parameters are not supported")
         elseif isconcretetype(fieldtype)
             wrapper = concretetuplefield(fieldtype, wrappers)
-            StructField(fieldname, string(fieldname), wrapper, [], Set(), wrapper.framelifetime, wrapper.datalifetime)
+            StructField(fieldname, string(fieldname), wrapper, [], Set(), wrapper.framelifetime, wrapper.datalifetime, false)
         else
-            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true, false)
         end
     elseif fieldtype isa DataType
         bt = basetype(fieldtype)
         if bt in keys(wrappers)
             fieldwrapper = wrappers[bt]
-            tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
-            references = extractparams(fieldtype, wrappers)
-            StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime)
+            if fieldwrapper isa StructWrapper && ismutabletype(fieldtype)
+                StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true, false)
+            else
+                tparams = map(a -> TypeParameter(a[1].name, a[2]), zip(bt.parameters, fieldtype.parameters))
+                references = extractparams(fieldtype, wrappers)
+                StructField(fieldname, string(fieldname), fieldwrapper, tparams, references, fieldwrapper.framelifetime, fieldwrapper.datalifetime, false)
+
+            end
         elseif Base.uniontype_layout(fieldtype)[1]
-            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true)
+            StructField(fieldname, string(fieldname), wrappers[Any], [], Set(), true, true, false)
         else
             error("Cannot create field wrapper")
         end
@@ -536,9 +545,7 @@ function createwrapper!(wrappers::Dict{Type,Wrapper}, type::Type)::Nothing
     end
 
     if hasatomicfields(bt)
-
         return
-
     end
 
     if isabstracttype(bt)
@@ -559,7 +566,8 @@ function createwrapper!(wrappers::Dict{Type,Wrapper}, type::Type)::Nothing
     end
 
     params = map(a -> StructParameter(a.name, !(a in typevars)), bt.parameters)
-    wrappers[bt] = StructWrapper(type.name.name, type.name, string(type.name.name), fields, params, framelifetime, datalifetime)
+    wrappers[bt] = StructWrapper(type.name.name, type.name, type, string(type.name.name), fields, params, framelifetime, datalifetime, false)
+
     nothing
 end
 
@@ -590,6 +598,7 @@ function haslifetimes(ty::Type, wrappers::Dict{Type,JlrsReflect.Wrapper})::Tuple
         framelifetime |= wrapper.framelifetime
 
         if wrapper isa StructWrapper
+
             for param in ty.parameters
                 if param isa Type
                     framelt, datalt = haslifetimes(param, wrappers)
@@ -671,7 +680,7 @@ julia> reflect([Complex])
 #[jlrs(julia_type = "Base.Complex")]
 pub struct Complex<T>
 where
-    T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
+    T: ::jlrs::layout::valid_layout::ValidField + Clone,
 {
     pub re: T,
     pub im: T,
@@ -698,6 +707,7 @@ end
 function strgenerics(wrapper::StructWrapper)::Union{Nothing,String}
     generics = []
     wheres = []
+
     if wrapper.framelifetime
         push!(generics, "'frame")
     end
@@ -709,7 +719,7 @@ function strgenerics(wrapper::StructWrapper)::Union{Nothing,String}
     for param in wrapper.typeparams
         if !param.elide
             push!(generics, string(param.name))
-            push!(wheres, string("    ", param.name, ": ::jlrs::layout::valid_layout::ValidLayout + Clone,"))
+            push!(wheres, string("    ", param.name, ": ::jlrs::layout::valid_layout::ValidField + Clone,"))
         end
     end
 
@@ -744,6 +754,10 @@ function strsignature(ty::DataType, wrappers::Dict{Type,Wrapper})::String
     wrapper = wrappers[base]
 
     name = wrapper.rsname
+    wrap_opt = false
+    if wrapper isa BuiltinWrapper && wrapper.pointerfield
+        wrap_opt = true
+    end
 
     generics = []
     if wrapper.framelifetime
@@ -767,22 +781,35 @@ function strsignature(ty::DataType, wrappers::Dict{Type,Wrapper})::String
         end
     end
 
-    if length(generics) > 0
+    name = if length(generics) > 0
         string(name, "<", join(generics, ", "), ">")
+    else
+        name
+    end
+
+    if wrap_opt
+        "::std::option::Option<$name>"
     else
         name
     end
 end
 
 function strsignature(wrapper::StructWrapper, field::Union{StructField,TupleField}, wrappers::Dict{Type,Wrapper})::String
+    wrap_opt = false
+
+    if field isa StructField && field.fieldtype isa StructWrapper && ismutabletype(field.fieldtype.type)
+        return "::std::option::Option<::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>>"
+    end
+
     if field.fieldtype isa GenericWrapper
         return string(field.fieldtype.name)
     elseif field.fieldtype isa TupleWrapper
         return strtuplesignature(wrapper, field, wrappers)
+    elseif field.fieldtype isa BuiltinWrapper && field.fieldtype.pointerfield
+        wrap_opt = true
     end
 
     generics = []
-
     if field.framelifetime
         push!(generics, "'frame")
     end
@@ -804,10 +831,16 @@ function strsignature(wrapper::StructWrapper, field::Union{StructField,TupleFiel
         end
     end
 
-    if length(generics) > 0
+    n = if length(generics) > 0
         string(field.fieldtype.rsname, "<", join(generics, ", "), ">")
     else
         field.fieldtype.rsname
+    end
+
+    if wrap_opt
+        "::std::option::Option<$n>"
+    else
+        n
     end
 end
 
@@ -881,12 +914,14 @@ function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union
              end === nothing && isbitstype(ty)
     intojulia = isbits ? ", IntoJulia" : ""
     zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
+    ismut = ismutabletype(basetype(ty))
 
     modname = string(wrapper.typename.module)
     if startswith(modname, "Main.__doctest__")
         modname = "Main"
     end
     intojulia = isbits ? ", IntoJulia" : ""
+    valid_field = ismut ? "" : "ValidField, "
     zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
 
     modname = string(wrapper.typename.module)
@@ -896,7 +931,7 @@ function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union
 
     parts = [
         "#[repr(C)]",
-        string("#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck", intojulia, ")]"),
+        string("#[derive(Clone, Debug, Unbox, ValidLayout, ", valid_field, "Typecheck", intojulia, ")]"),
         string("#[jlrs(julia_type = \"", modname, ".", wrapper.typename.name, "\"", zst, ")]"),
         string("pub struct ", strstructname(wrapper), "{")
     ]
@@ -982,3 +1017,6 @@ function renamefields!(wrappers::Wrappers, type::Type, rename::Vector{Pair{Symbo
     renamefields!(wrappers, type, Dict(rename))
 end
 end
+
+
+

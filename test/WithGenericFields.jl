@@ -40,11 +40,11 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithGenericT)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithGenericT")]
         pub struct WithGenericT<T>
         where
-            T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
+            T: ::jlrs::layout::valid_layout::ValidField + Clone,
         {
             pub a: T,
         }"""
@@ -55,11 +55,11 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithNestedGenericT)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithNestedGenericT")]
         pub struct WithNestedGenericT<T>
         where
-            T: ::jlrs::layout::valid_layout::ValidLayout + Clone,
+            T: ::jlrs::layout::valid_layout::ValidField + Clone,
         {
             pub a: WithGenericT<T>,
         }"""
@@ -70,7 +70,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[WithSetGeneric] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.WithSetGeneric")]
         pub struct WithSetGeneric {
             pub a: WithGenericT<i64>,
@@ -82,7 +82,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(WithValueType)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithValueType")]
         pub struct WithValueType {
             pub a: i64,
@@ -94,10 +94,10 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[WithGenericUnionAll] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithGenericUnionAll")]
         pub struct WithGenericUnionAll<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
+            pub a: ::std::option::Option<::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>>,
         }"""
     end
 
@@ -110,7 +110,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[WithSetGenericTuple] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.WithSetGenericTuple")]
         pub struct WithSetGenericTuple {
             pub a: ::jlrs::wrappers::inline::tuple::Tuple1<WithGenericT<i64>>,
@@ -122,22 +122,22 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[WithPropagatedLifetime] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetime")]
         pub struct WithPropagatedLifetime<'frame> {
-            pub a: WithGenericT<::jlrs::wrappers::ptr::module::ModuleRef<'frame>>,
+            pub a: WithGenericT<::std::option::Option<::jlrs::wrappers::ptr::module::ModuleRef<'frame>>>,
         }"""
     end
 
     @test begin
         b = JlrsReflect.reflect([WithPropagatedLifetimes])
         sb = JlrsReflect.StringWrappers(b)
-
+        
         sb[WithPropagatedLifetimes] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.WithPropagatedLifetimes")]
         pub struct WithPropagatedLifetimes<'frame, 'data> {
-            pub a: WithGenericT<::jlrs::wrappers::inline::tuple::Tuple2<i32, WithGenericT<::jlrs::wrappers::ptr::array::ArrayRef<'frame, 'data>>>>,
+            pub a: WithGenericT<::jlrs::wrappers::inline::tuple::Tuple2<i32, WithGenericT<::std::option::Option<::jlrs::wrappers::ptr::array::ArrayRef<'frame, 'data>>>>>,
         }"""
     end
 end

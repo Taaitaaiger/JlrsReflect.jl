@@ -24,7 +24,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(SingleVariant)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.SingleVariant")]
         pub struct SingleVariant {
             pub a: i32,
@@ -36,7 +36,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(DoubleVariant)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.DoubleVariant")]
         pub struct DoubleVariant {
             #[jlrs(bits_union_align)]
@@ -53,7 +53,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(SizeAlignMismatch)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.SizeAlignMismatch")]
         pub struct SizeAlignMismatch {
             #[jlrs(bits_union_align)]
@@ -70,10 +70,10 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[JlrsReflect.basetype(UnionInTuple)] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
         #[jlrs(julia_type = "Main.UnionInTuple")]
         pub struct UnionInTuple<'frame, 'data> {
-            pub a: ::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>,
+            pub a: ::std::option::Option<::jlrs::wrappers::ptr::value::ValueRef<'frame, 'data>>,
         }"""
     end
 

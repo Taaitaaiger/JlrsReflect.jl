@@ -14,7 +14,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsUInt8TupleInt32Int64] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32Int64")]
         pub struct BitsUInt8TupleInt32Int64 {
             pub a: u8,
@@ -27,7 +27,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[BitsUInt8TupleInt32TupleInt16UInt16] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.BitsUInt8TupleInt32TupleInt16UInt16")]
         pub struct BitsUInt8TupleInt32TupleInt16UInt16 {
             pub a: u8,

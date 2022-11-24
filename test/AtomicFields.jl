@@ -25,7 +25,7 @@ end
         sb = JlrsReflect.StringWrappers(b)
 
         sb[WithInt32] === """#[repr(C)]
-        #[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+        #[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
         #[jlrs(julia_type = "Main.WithInt32")]
         pub struct WithInt32 {
             pub int32: i32,

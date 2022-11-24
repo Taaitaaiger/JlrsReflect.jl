@@ -1,6 +1,7 @@
 using JlrsReflect
 using Test
 include("SingleFieldBits.jl")
+include("Mutable.jl")
 include("MultiFieldBits.jl")
 include("BitsWithCustom.jl")
 include("BitsWithTuples.jl")
