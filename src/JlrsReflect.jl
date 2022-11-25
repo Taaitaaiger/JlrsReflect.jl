@@ -960,7 +960,7 @@ julia> renamestruct!(wrappers, Foo, "Bar")
 
 julia> wrappers
 #[repr(C)]
-#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+#[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
 #[jlrs(julia_type = "Main.Foo", zero_sized_type)]
 pub struct Bar {
 }
@@ -992,7 +992,7 @@ julia> renamefields!(wrappers, Food, [:burger => "hamburger"])
 
 julia> wrappers
 #[repr(C)]
-#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck, IntoJulia)]
+#[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck, IntoJulia)]
 #[jlrs(julia_type = "Main.Food")]
 pub struct Food {
     pub hamburger: ::jlrs::wrappers::inline::bool::Bool,
