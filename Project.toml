@@ -1,7 +1,7 @@
 name = "JlrsReflect"
 uuid = "3e9c415f-dc9c-4763-9f27-843ce091455a"
 authors = ["Thomas van Doornmalen <thomas.vandoornmalen@gmail.com> and contributors"]
-version = "0.4.0"
+version = "0.5.0"
 
 [compat]
 julia = "1.6"
