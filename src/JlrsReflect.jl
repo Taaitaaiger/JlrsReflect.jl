@@ -676,7 +676,7 @@ julia> using JlrsReflect
 
 julia> reflect([Complex])
 #[repr(C)]
-#[derive(Clone, Debug, Unbox, ValidLayout, Typecheck)]
+#[derive(Clone, Debug, Unbox, ValidLayout, ValidField, Typecheck)]
 #[jlrs(julia_type = "Base.Complex")]
 pub struct Complex<T>
 where
