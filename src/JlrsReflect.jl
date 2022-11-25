@@ -913,7 +913,7 @@ function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union
                  p isa TypeVar
              end === nothing && isbitstype(ty)
     intojulia = isbits ? ", IntoJulia" : ""
-    zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
+    zst = isbits && sizeof(ty) == 0 ? ", zero_sized_type" : ""
     ismut = ismutabletype(basetype(ty))
 
     modname = string(wrapper.typename.module)
@@ -922,7 +922,7 @@ function strwrapper(wrapper::StructWrapper, wrappers::Dict{Type,Wrapper})::Union
     end
     intojulia = isbits ? ", IntoJulia" : ""
     valid_field = ismut ? "" : "ValidField, "
-    zst = isbits && ty.size == 0 ? ", zero_sized_type" : ""
+    zst = isbits && sizeof(ty) == 0 ? ", zero_sized_type" : ""
 
     modname = string(wrapper.typename.module)
     if startswith(modname, "Main.__doctest__")
